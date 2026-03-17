@@ -23,6 +23,29 @@ type HookResult = Pick<
   | 'getEnforcer'
 >;
 
+function renderCasbinHook<TResult>(hook: () => TResult, wrapper?: React.ComponentType<{ children: React.ReactNode }>) {
+  let latestResult: TResult | undefined;
+
+  renderHookTest({
+    hook,
+    props: {},
+    onResult: (result) => {
+      latestResult = result;
+    },
+    wrapper,
+  });
+
+  return {
+    getResult(): TResult {
+      if (!latestResult) {
+        throw new Error('Hook result is not available yet');
+      }
+
+      return latestResult;
+    },
+  };
+}
+
 async function createFixtureAuthorizer() {
   const response = getEndpointResponseFixture();
 
@@ -41,33 +64,25 @@ describe('@casbinjs/react integration', () => {
 
   it('provides an existing authorizer through CasbinProvider', async () => {
     const authorizer = await createFixtureAuthorizer();
-    let latestHook: HookResult | undefined;
 
     function WrapperWithAuthorizer({ children }: { children: React.ReactNode }) {
       return <CasbinProvider authorizer={authorizer}>{children}</CasbinProvider>;
     }
 
-    renderHookTest({
-      hook: () => useCasbin(),
-      props: {},
-      onResult: (result) => {
-        latestHook = result;
-      },
-      wrapper: WrapperWithAuthorizer,
-    });
+    const { getResult } = renderCasbinHook<HookResult>(() => useCasbin(), WrapperWithAuthorizer);
 
     await waitFor(() => {
-      expect(latestHook).toBeDefined();
-      expect(latestHook?.authorizer).toBe(authorizer);
-      expect(latestHook?.isLoading).toBe(false);
-      expect(latestHook?.error).toBeNull();
-      expect(latestHook?.getEnforcer()).not.toBeNull();
+      const result = getResult();
+
+      expect(result.authorizer).toBe(authorizer);
+      expect(result.isLoading).toBe(false);
+      expect(result.error).toBeNull();
+      expect(result.getEnforcer()).not.toBeNull();
     });
   });
 
   it('creates an authorizer from options and exposes it through the hook', async () => {
     const response = getEndpointResponseFixture();
-    let latestHook: HookResult | undefined;
 
     function WrapperWithOptions({ children }: { children: React.ReactNode }) {
       return (
@@ -82,24 +97,18 @@ describe('@casbinjs/react integration', () => {
       );
     }
 
-    renderHookTest({
-      hook: () => useCasbin(),
-      props: {},
-      onResult: (result) => {
-        latestHook = result;
-      },
-      wrapper: WrapperWithOptions,
-    });
+    const { getResult } = renderCasbinHook<HookResult>(() => useCasbin(), WrapperWithOptions);
 
     await waitFor(() => {
-      expect(latestHook).toBeDefined();
-      expect(latestHook?.authorizer).not.toBeNull();
-      expect(latestHook?.isLoading).toBe(false);
-      expect(latestHook?.error).toBeNull();
+      const result = getResult();
+
+      expect(result.authorizer).not.toBeNull();
+      expect(result.isLoading).toBe(false);
+      expect(result.error).toBeNull();
     });
 
-    await expect(latestHook!.can('read', 'document:direct-2')).resolves.toBe(true);
-    await expect(latestHook!.can('read', 'document:public-2')).resolves.toBe(true);
+    await expect(getResult().can('read', 'document:direct-2')).resolves.toBe(true);
+    await expect(getResult().can('read', 'document:public-2')).resolves.toBe(true);
   });
 
   it('supports useCan for React-friendly permission checks', async () => {
@@ -109,26 +118,22 @@ describe('@casbinjs/react integration', () => {
       organization: 'org-1',
       policies: [['p', 'alice', 'document:123', 'org-1', 'read', 'allow']],
     });
-    let latestHook: CasbinPermissionResult | undefined;
 
     function WrapperWithAuthorizer({ children }: { children: React.ReactNode }) {
       return <CasbinProvider authorizer={authorizer}>{children}</CasbinProvider>;
     }
 
-    renderHookTest({
-      hook: () => useCan('read', 'document:123'),
-      props: {},
-      onResult: (result) => {
-        latestHook = result;
-      },
-      wrapper: WrapperWithAuthorizer,
-    });
+    const { getResult } = renderCasbinHook<CasbinPermissionResult>(
+      () => useCan('read', 'document:123'),
+      WrapperWithAuthorizer
+    );
 
     await waitFor(() => {
-      expect(latestHook).toBeDefined();
-      expect(latestHook?.isLoading).toBe(false);
-      expect(latestHook?.error).toBeNull();
-      expect(latestHook?.allowed).toBe(true);
+      const result = getResult();
+
+      expect(result.isLoading).toBe(false);
+      expect(result.error).toBeNull();
+      expect(result.allowed).toBe(true);
     });
   });
 
@@ -139,26 +144,22 @@ describe('@casbinjs/react integration', () => {
       organization: 'org-1',
       policies: [['p', 'alice', 'document:123', 'org-1', 'read', 'allow']],
     });
-    let latestHook: CasbinPermissionResult | undefined;
 
     function WrapperWithAuthorizer({ children }: { children: React.ReactNode }) {
       return <CasbinProvider authorizer={authorizer}>{children}</CasbinProvider>;
     }
 
-    renderHookTest({
-      hook: () => useCanAny(['read', 'update'], 'document:123'),
-      props: {},
-      onResult: (result) => {
-        latestHook = result;
-      },
-      wrapper: WrapperWithAuthorizer,
-    });
+    const { getResult } = renderCasbinHook<CasbinPermissionResult>(
+      () => useCanAny(['read', 'update'], 'document:123'),
+      WrapperWithAuthorizer
+    );
 
     await waitFor(() => {
-      expect(latestHook).toBeDefined();
-      expect(latestHook?.isLoading).toBe(false);
-      expect(latestHook?.error).toBeNull();
-      expect(latestHook?.allowed).toBe(true);
+      const result = getResult();
+
+      expect(result.isLoading).toBe(false);
+      expect(result.error).toBeNull();
+      expect(result.allowed).toBe(true);
     });
   });
 
@@ -169,26 +170,22 @@ describe('@casbinjs/react integration', () => {
       organization: 'org-1',
       policies: [['p', 'alice', 'document:123', 'org-1', 'read', 'allow']],
     });
-    let latestHook: CasbinPermissionResult | undefined;
 
     function WrapperWithAuthorizer({ children }: { children: React.ReactNode }) {
       return <CasbinProvider authorizer={authorizer}>{children}</CasbinProvider>;
     }
 
-    renderHookTest({
-      hook: () => useCanAll(['read', 'update'], 'document:123'),
-      props: {},
-      onResult: (result) => {
-        latestHook = result;
-      },
-      wrapper: WrapperWithAuthorizer,
-    });
+    const { getResult } = renderCasbinHook<CasbinPermissionResult>(
+      () => useCanAll(['read', 'update'], 'document:123'),
+      WrapperWithAuthorizer
+    );
 
     await waitFor(() => {
-      expect(latestHook).toBeDefined();
-      expect(latestHook?.isLoading).toBe(false);
-      expect(latestHook?.error).toBeNull();
-      expect(latestHook?.allowed).toBe(false);
+      const result = getResult();
+
+      expect(result.isLoading).toBe(false);
+      expect(result.error).toBeNull();
+      expect(result.allowed).toBe(false);
     });
   });
 
@@ -199,31 +196,25 @@ describe('@casbinjs/react integration', () => {
       organization: 'org-1',
       policies: [],
     });
-    let latestHook: HookResult | undefined;
 
     function WrapperWithAuthorizer({ children }: { children: React.ReactNode }) {
       return <CasbinProvider authorizer={authorizer}>{children}</CasbinProvider>;
     }
 
-    renderHookTest({
-      hook: () => useCasbin(),
-      props: {},
-      onResult: (result) => {
-        latestHook = result;
-      },
-      wrapper: WrapperWithAuthorizer,
-    });
+    const { getResult } = renderCasbinHook<HookResult>(() => useCasbin(), WrapperWithAuthorizer);
 
     await waitFor(() => {
-      expect(latestHook?.authorizer).toBe(authorizer);
-      expect(latestHook?.isLoading).toBe(false);
+      const result = getResult();
+
+      expect(result.authorizer).toBe(authorizer);
+      expect(result.isLoading).toBe(false);
     });
 
-    await expect(latestHook!.can('read', 'document:direct-1')).resolves.toBe(false);
+    await expect(getResult().can('read', 'document:direct-1')).resolves.toBe(false);
 
-    await latestHook!.addPolicy(['p', 'alice', 'document:direct-1', 'org-1', 'read', 'allow']);
+    await getResult().addPolicy(['p', 'alice', 'document:direct-1', 'org-1', 'read', 'allow']);
 
-    await expect(latestHook!.can('read', 'document:direct-1')).resolves.toBe(true);
+    await expect(getResult().can('read', 'document:direct-1')).resolves.toBe(true);
   });
 
   it('passes removePolicy through and updates authorization state', async () => {
@@ -233,117 +224,88 @@ describe('@casbinjs/react integration', () => {
       organization: 'org-1',
       policies: [['p', 'alice', 'document:direct-1', 'org-1', 'read', 'allow']],
     });
-    let latestHook: HookResult | undefined;
 
     function WrapperWithAuthorizer({ children }: { children: React.ReactNode }) {
       return <CasbinProvider authorizer={authorizer}>{children}</CasbinProvider>;
     }
 
-    renderHookTest({
-      hook: () => useCasbin(),
-      props: {},
-      onResult: (result) => {
-        latestHook = result;
-      },
-      wrapper: WrapperWithAuthorizer,
-    });
+    const { getResult } = renderCasbinHook<HookResult>(() => useCasbin(), WrapperWithAuthorizer);
 
     await waitFor(() => {
-      expect(latestHook?.authorizer).toBe(authorizer);
-      expect(latestHook?.isLoading).toBe(false);
+      const result = getResult();
+
+      expect(result.authorizer).toBe(authorizer);
+      expect(result.isLoading).toBe(false);
     });
 
-    await expect(latestHook!.can('read', 'document:direct-1')).resolves.toBe(true);
+    await expect(getResult().can('read', 'document:direct-1')).resolves.toBe(true);
 
-    await latestHook!.removePolicy(['p', 'alice', 'document:direct-1', 'org-1', 'read', 'allow']);
+    await getResult().removePolicy(['p', 'alice', 'document:direct-1', 'org-1', 'read', 'allow']);
 
-    await expect(latestHook!.can('read', 'document:direct-1')).resolves.toBe(false);
+    await expect(getResult().can('read', 'document:direct-1')).resolves.toBe(false);
   });
 
   it('passes replacePolicies through and updates canonical raw policy access', async () => {
     const authorizer = await createFixtureAuthorizer();
-    let latestHook: HookResult | undefined;
 
     function WrapperWithAuthorizer({ children }: { children: React.ReactNode }) {
       return <CasbinProvider authorizer={authorizer}>{children}</CasbinProvider>;
     }
 
-    renderHookTest({
-      hook: () => useCasbin(),
-      props: {},
-      onResult: (result) => {
-        latestHook = result;
-      },
-      wrapper: WrapperWithAuthorizer,
-    });
+    const { getResult } = renderCasbinHook<HookResult>(() => useCasbin(), WrapperWithAuthorizer);
 
     await waitFor(() => {
-      expect(latestHook?.authorizer).toBe(authorizer);
-      expect(latestHook?.isLoading).toBe(false);
+      const result = getResult();
+
+      expect(result.authorizer).toBe(authorizer);
+      expect(result.isLoading).toBe(false);
     });
 
-    await expect(latestHook!.can('read', 'document:direct-1')).resolves.toBe(true);
-    await expect(latestHook!.can('write', 'document:direct-1')).resolves.toBe(false);
+    await expect(getResult().can('read', 'document:direct-1')).resolves.toBe(true);
+    await expect(getResult().can('write', 'document:direct-1')).resolves.toBe(false);
 
-    await latestHook!.replacePolicies([
-      ['p', 'alice', 'document:direct-1', 'org-1', 'write', 'allow'],
-    ]);
+    await getResult().replacePolicies([['p', 'alice', 'document:direct-1', 'org-1', 'write', 'allow']]);
 
-    await expect(latestHook!.can('read', 'document:direct-1')).resolves.toBe(false);
-    await expect(latestHook!.can('write', 'document:direct-1')).resolves.toBe(true);
+    await expect(getResult().can('read', 'document:direct-1')).resolves.toBe(false);
+    await expect(getResult().can('write', 'document:direct-1')).resolves.toBe(true);
   });
 
   it('exposes error state when neither authorizer nor options are provided', async () => {
-    let latestHook: HookResult | undefined;
-
     function EmptyWrapper({ children }: { children: React.ReactNode }) {
       return <CasbinProvider>{children}</CasbinProvider>;
     }
 
-    renderHookTest({
-      hook: () => useCasbin(),
-      props: {},
-      onResult: (result) => {
-        latestHook = result;
-      },
-      wrapper: EmptyWrapper,
-    });
+    const { getResult } = renderCasbinHook<HookResult>(() => useCasbin(), EmptyWrapper);
 
     await waitFor(() => {
-      expect(latestHook).toBeDefined();
-      expect(latestHook?.authorizer).toBeNull();
-      expect(latestHook?.isLoading).toBe(false);
-      expect(latestHook?.error).toEqual(
+      const result = getResult();
+
+      expect(result.authorizer).toBeNull();
+      expect(result.isLoading).toBe(false);
+      expect(result.error).toEqual(
         new Error('CasbinProvider requires either an authorizer or options')
       );
     });
 
-    await expect(latestHook!.can('read', 'document:direct-1')).resolves.toBe(false);
+    await expect(getResult().can('read', 'document:direct-1')).resolves.toBe(false);
   });
 
   it('rejects addPolicy when authorizer is not ready', async () => {
-    let latestHook: HookResult | undefined;
-
     function EmptyWrapper({ children }: { children: React.ReactNode }) {
       return <CasbinProvider>{children}</CasbinProvider>;
     }
 
-    renderHookTest({
-      hook: () => useCasbin(),
-      props: {},
-      onResult: (result) => {
-        latestHook = result;
-      },
-      wrapper: EmptyWrapper,
-    });
+    const { getResult } = renderCasbinHook<HookResult>(() => useCasbin(), EmptyWrapper);
 
     await waitFor(() => {
-      expect(latestHook?.authorizer).toBeNull();
-      expect(latestHook?.isLoading).toBe(false);
+      const result = getResult();
+
+      expect(result.authorizer).toBeNull();
+      expect(result.isLoading).toBe(false);
     });
 
     await expect(
-      latestHook!.addPolicy(['p', 'alice', 'document:direct-1', 'org-1', 'read', 'allow'])
+      getResult().addPolicy(['p', 'alice', 'document:direct-1', 'org-1', 'read', 'allow'])
     ).rejects.toThrow('Authorizer is not ready');
   });
-})
+});
