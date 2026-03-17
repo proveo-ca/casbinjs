@@ -1,0 +1,48 @@
+@startuml
+title casbinjs/react - Initialization Sequence
+
+skinparam shadowing false
+
+actor ReactApp as App
+participant "Consumer Fetch Layer" as FetchLayer
+participant "External Endpoint" as Endpoint
+box "casbinjs/core"
+participant "Authorizer" as Authorizer
+end box
+box "casbinjs/react"
+participant "AuthzProvider" as Provider
+participant "React Context" as Context
+end box
+participant "Child Component" as Child
+
+App -> FetchLayer : request authz data
+FetchLayer -> Endpoint : fetch AuthorizationPayload
+Endpoint --> FetchLayer : AuthorizationPayload
+
+alt app constructs authorizer before render
+  FetchLayer -> Authorizer : createAuthorizer(payload)
+  FetchLayer --> App : authorizer
+  App -> Provider : render with authorizer
+else provider receives payload-derived input
+  FetchLayer --> App : payload
+  App -> Provider : render with payload / config
+  Provider -> Authorizer : create / update authorizer
+end
+
+Provider -> Context : publish authorizer state
+Child -> Context : consume via useAuthz()
+Context --> Child : can / canAny / canAll / helpers
+
+note over FetchLayer,Endpoint
+API access belongs to the consumer app.
+The library only defines the expected input contract.
+end note
+
+note over Provider,Context
+casbinjs/react supplies React-specific integration.
+end note
+
+note over Authorizer
+casbinjs/core supplies the vanilla-ready authorizer.
+end note
+@enduml

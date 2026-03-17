@@ -1,0 +1,68 @@
+@startuml
+title casbinjs/core - Component View and Responsibility Boundaries
+
+skinparam componentStyle rectangle
+skinparam shadowing false
+
+actor ConsumerApp as Consumer
+database "External Endpoint / Data Source" as Endpoint
+
+package "casbinjs/core" {
+  interface "Authorizer" as AuthorizerContract
+  component "Authorizer Facade" as AuthorizerFacade
+  component "Input Normalizer" as InputNormalizer
+  component "Enforcer Factory" as EnforcerFactory
+  component "Facade State" as FacadeState
+}
+
+package "casbin-core" {
+  component "Enforcer" as Enforcer
+  component "Model Evaluation" as Evaluation
+  component "Policy Processing" as PolicyProcessing
+}
+
+Endpoint --> Consumer : AuthorizationPayload
+
+Consumer --> AuthorizerContract : can / canAny / canAll
+Consumer --> AuthorizerContract : replacePayload\nsetPermissions\naddPermission\nremovePermission
+AuthorizerContract <|.. AuthorizerFacade
+
+Consumer --> InputNormalizer : provide payload / options
+InputNormalizer --> AuthorizerFacade : normalized input
+
+AuthorizerFacade --> FacadeState : keep facade-level state
+AuthorizerFacade --> EnforcerFactory : create / configure enforcer
+EnforcerFactory --> Enforcer : initialize with model / policies
+AuthorizerFacade --> Enforcer : delegate checks
+Enforcer --> Evaluation : apply matcher logic
+Enforcer --> PolicyProcessing : process policies / roles
+
+note right of Endpoint
+Outside library boundary.
+Consumer owns transport:
+tRPC, REST, GraphQL,
+SSR props, static JSON, etc.
+end note
+
+note bottom of AuthorizerFacade
+casbinjs/core owns:
+- vanilla-ready Authorizer interface
+- input normalization
+- ergonomic initialization contracts
+- convenience methods
+- delegation to casbin-core
+end note
+
+note bottom of FacadeState
+Facade-level state only.
+Not a separate authorization engine.
+end note
+
+note bottom of Enforcer
+casbin-core owns:
+- enforcer implementation
+- matcher evaluation
+- policy processing
+- model-driven authorization semantics
+end note
+@enduml

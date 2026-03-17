@@ -1,0 +1,120 @@
+@startuml
+title casbinjs/core - Data Contracts and Library Boundaries
+
+skinparam shadowing false
+skinparam classAttributeIconSize 0
+
+package "casbinjs/core" {
+  interface PermissionGrant {
+    +action: string
+    +resource: string
+  }
+
+  interface AuthorizationPayload {
+    +roles?: string[]
+    +permissions: PermissionGrant[]
+  }
+
+  interface AuthorizerOptions {
+    +model?: string
+    +permissions?: PermissionGrant[]
+    +policies?: string[][]
+    +subject?: string
+    +organization?: string
+  }
+
+  interface Authorizer {
+    +getEnforcer(): Enforcer
+    +can(action: string, resource: string): boolean
+    +canAny(actions: string[], resource: string): boolean
+    +canAll(actions: string[], resource: string): boolean
+    +setPermissions(permissions: PermissionGrant[]): void
+    +addPermission(permission: PermissionGrant): void
+    +removePermission(permission: PermissionGrant): void
+    +replacePayload(payload: AuthorizationPayload): void
+  }
+
+  class AuthorizerFacade {
+    -enforcer: Enforcer
+    -permissions: PermissionGrant[]
+    -roles: string[]
+    -subject?: string
+    -organization?: string
+    +getEnforcer(): Enforcer
+    +can(action: string, resource: string): boolean
+    +canAny(actions: string[], resource: string): boolean
+    +canAll(actions: string[], resource: string): boolean
+    +setPermissions(permissions: PermissionGrant[]): void
+    +addPermission(permission: PermissionGrant): void
+    +removePermission(permission: PermissionGrant): void
+    +replacePayload(payload: AuthorizationPayload): void
+  }
+
+  class InputNormalizer {
+    +fromPayload(payload: AuthorizationPayload): PermissionGrant[]
+    +fromOptions(options: AuthorizerOptions): PermissionGrant[]
+  }
+
+  class EnforcerFactory {
+    +createEnforcer(options: AuthorizerOptions): Enforcer
+  }
+
+  class FacadeState {
+    -permissions: PermissionGrant[]
+    -roles: string[]
+    +setPermissions(permissions: PermissionGrant[]): void
+    +addPermission(permission: PermissionGrant): void
+    +removePermission(permission: PermissionGrant): void
+    +replacePayload(payload: AuthorizationPayload): void
+    +getPermissions(): PermissionGrant[]
+    +getRoles(): string[]
+  }
+}
+
+package "casbin-core" {
+  interface Enforcer {
+    +enforce(...args): boolean
+  }
+}
+
+Authorizer <|. AuthorizerFacade
+
+AuthorizationPayload *-- "0..*" PermissionGrant
+AuthorizerOptions o-- "0..*" PermissionGrant
+
+AuthorizerFacade ---> FacadeState
+AuthorizerFacade --> EnforcerFactory
+AuthorizerFacade ---> Enforcer
+InputNormalizer --> AuthorizationPayload
+InputNormalizer --> AuthorizerOptions
+InputNormalizer --> PermissionGrant
+EnforcerFactory --> AuthorizerOptions
+EnforcerFactory --> Enforcer
+FacadeState --> AuthorizationPayload
+FacadeState --> PermissionGrant
+
+note bottom of AuthorizationPayload
+casbinjs/core transport-facing contract.
+Supplied by the consumer from any external source.
+end note
+
+note top of Authorizer
+casbinjs/core public API:
+vanilla-ready checks and local facade updates.
+end note
+
+note bottom of AuthorizerFacade
+Facade over casbin-core.
+It does not re-implement enforcement semantics.
+end note
+
+note right of Enforcer
+casbin-core dependency boundary.
+Underlying enforcement engine used by casbinjs/core.
+end note
+
+note bottom of FacadeState
+Local wrapper state used by the facade.
+Not a separate policy engine.
+end note
+@enduml

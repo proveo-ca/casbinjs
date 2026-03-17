@@ -1,0 +1,103 @@
+@startuml
+title casbinjs/core - Usage, Delegation, and Synchronization Flow
+
+skinparam shadowing false
+
+actor ConsumerApp as Consumer
+participant "External Endpoint" as Endpoint
+box "casbinjs/core"
+participant "Authorizer Facade" as Authorizer
+participant "Input Normalizer / Facade State" as FacadeLayer
+participant "Enforcer Factory" as Factory
+end box
+box "casbin-core"
+participant "Enforcer" as Enforcer
+end box
+
+== Initialization ==
+
+Consumer -> Endpoint : fetch authorization payload
+Endpoint --> Consumer : AuthorizationPayload
+Consumer -> Authorizer : replacePayload(payload)\nor createAuthorizer(...)
+Authorizer -> FacadeLayer : normalize payload / update facade state
+Authorizer -> Factory : build / configure enforcer
+Factory -> Enforcer : initialize with model / policies
+
+== Permission checks ==
+
+Consumer -> Authorizer : can(action, resource)
+Authorizer -> Enforcer : enforce(...)
+Enforcer --> Authorizer : allow / deny
+Authorizer --> Consumer : boolean
+
+Consumer -> Authorizer : canAny(actions, resource)
+loop each action
+  Authorizer -> Enforcer : enforce(...)
+  Enforcer --> Authorizer : result
+end
+Authorizer --> Consumer : boolean
+
+Consumer -> Authorizer : canAll(actions, resource)
+loop each action
+  Authorizer -> Enforcer : enforce(...)
+  Enforcer --> Authorizer : result
+end
+Authorizer --> Consumer : boolean
+
+== Local facade mutation only ==
+
+Consumer -> Authorizer : addPermission(permission)
+Authorizer -> FacadeLayer : update local facade state
+
+Consumer -> Authorizer : removePermission(permission)
+Authorizer -> FacadeLayer : update local facade state
+
+== Consumer-owned backend sync ==
+
+group Canonical refetch
+  Consumer -> Endpoint : persist mutation
+  Endpoint --> Consumer : success
+  Consumer -> Endpoint : refetch authorization payload
+  Endpoint --> Consumer : updated AuthorizationPayload
+  Consumer -> Authorizer : replacePayload(payload)
+end
+
+group Optimistic update with reconciliation
+  Consumer -> Authorizer : addPermission(permission)
+  Authorizer -> FacadeLayer : optimistic local update
+  Consumer -> Endpoint : persist mutation
+  alt backend success
+    Endpoint --> Consumer : canonical updated payload
+    Consumer -> Authorizer : replacePayload(payload)
+  else backend failure
+    Endpoint --> Consumer : error
+    Consumer -> Authorizer : removePermission(permission)\nor rollback state
+  end
+end
+
+note over Consumer,Endpoint
+Outside library boundary.
+casbinjs/core does not fetch or persist.
+The consumer owns API integration.
+end note
+
+note over Authorizer,FacadeLayer
+casbinjs/core owns:
+- facade initialization
+- input normalization
+- local wrapper state
+- consumer-facing convenience APIs
+end note
+
+note over Enforcer
+casbin-core owns:
+- enforcement execution
+- model evaluation
+- policy processing
+end note
+
+note over Authorizer
+Worker-backed execution may be added later,
+but the initial core design remains in-process.
+end note
+@enduml

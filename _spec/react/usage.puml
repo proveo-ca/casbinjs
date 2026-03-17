@@ -1,0 +1,58 @@
+@startuml
+title casbinjs/react - Usage Flow
+
+skinparam shadowing false
+
+actor ReactComponent as Component
+participant "Consumer Fetch Layer" as FetchLayer
+participant "External Endpoint" as Endpoint
+box "casbinjs/react"
+participant "AuthzProvider" as Provider
+participant "useAuthz()" as UseAuthz
+participant "usePermissionsEnforcer()" as UsePermissionsEnforcer
+end box
+box "casbinjs/core"
+participant "Authorizer" as Authorizer
+end box
+
+== Initialization ==
+
+FetchLayer -> Endpoint : fetch AuthorizationPayload
+Endpoint --> FetchLayer : AuthorizationPayload
+FetchLayer -> Authorizer : create / replace payload
+FetchLayer -> Provider : render with authorizer\nor payload-derived state
+Provider -> Authorizer : provide current authorizer via context
+
+== Hook consumption ==
+
+Component -> UseAuthz : useAuthz()
+UseAuthz -> Provider : consume context
+Provider --> UseAuthz : authorizer helpers
+UseAuthz --> Component : can / canAny / canAll / getEnforcer
+
+Component -> UsePermissionsEnforcer : usePermissionsEnforcer()
+UsePermissionsEnforcer -> UseAuthz : compose base authz hook
+UseAuthz --> UsePermissionsEnforcer : can(...)
+UsePermissionsEnforcer --> Component : canView / canUpdate / canDelete / etc.
+
+== Permission checks ==
+
+Component -> UseAuthz : can(action, resourceType, resourceId)
+UseAuthz -> Authorizer : can(action, resourceKey)
+Authorizer --> UseAuthz : boolean
+UseAuthz --> Component : boolean
+
+note over FetchLayer,Endpoint
+Fetching stays app-owned.
+tRPC is one possible consumer choice,
+not part of the library contract.
+end note
+
+note over Provider,UsePermissionsEnforcer
+casbinjs/react is the ready-to-use React layer.
+end note
+
+note over Authorizer
+casbinjs/core remains the vanilla-ready interface.
+end note
+@enduml
