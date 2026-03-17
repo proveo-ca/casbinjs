@@ -1,6 +1,7 @@
 # Dependencies
 node_modules/
 .pnpm-store/
+.npm
 
 # Build output
 dist/
@@ -9,6 +10,7 @@ coverage/
 *.tsbuildinfo
 
 # Turbo / caches
+.config
 .turbo/
 .cache/
 .eslintcache

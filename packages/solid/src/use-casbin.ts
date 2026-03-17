@@ -1,4 +1,4 @@
-import { useContext, useEffect, useMemo, useState } from 'react';
+import { createEffect, createSignal, onCleanup, useContext } from 'solid-js';
 import { CasbinContext } from './context';
 import type { CasbinContextValue, CasbinPermissionResult } from './types';
 
@@ -14,30 +14,29 @@ export function useCasbin(): CasbinContextValue {
 
 export function useCan(action: string, resource: string): CasbinPermissionResult {
   const { can, isLoading: providerLoading, error: providerError } = useCasbin();
-  const [allowed, setAllowed] = useState(false);
-  const [error, setError] = useState<Error | null>(providerError);
-  const [isLoading, setIsLoading] = useState(providerLoading);
+  const [allowed, setAllowed] = createSignal(false);
+  const [error, setError] = createSignal<Error | null>(providerError());
+  const [isLoading, setIsLoading] = createSignal(providerLoading());
 
-  useEffect(() => {
-    let active = true;
-
-    if (providerError) {
+  createEffect(() => {
+    if (providerError()) {
       setAllowed(false);
-      setError(providerError);
+      setError(providerError());
       setIsLoading(false);
-      return () => {
-        active = false;
-      };
+      return;
     }
 
-    if (providerLoading) {
+    if (providerLoading()) {
       setAllowed(false);
       setError(null);
       setIsLoading(true);
-      return () => {
-        active = false;
-      };
+      return;
     }
+
+    let active = true;
+    onCleanup(() => {
+      active = false;
+    });
 
     async function checkPermission() {
       setIsLoading(true);
@@ -64,48 +63,36 @@ export function useCan(action: string, resource: string): CasbinPermissionResult
     }
 
     void checkPermission();
+  });
 
-    return () => {
-      active = false;
-    };
-  }, [action, can, providerError, providerLoading, resource]);
-
-  return useMemo(
-    () => ({
-      allowed,
-      isLoading,
-      error,
-    }),
-    [allowed, error, isLoading]
-  );
+  return { allowed, isLoading, error };
 }
 
 export function useCanAny(actions: string[], resource: string): CasbinPermissionResult {
   const { canAny, isLoading: providerLoading, error: providerError } = useCasbin();
-  const [allowed, setAllowed] = useState(false);
-  const [error, setError] = useState<Error | null>(providerError);
-  const [isLoading, setIsLoading] = useState(providerLoading);
+  const [allowed, setAllowed] = createSignal(false);
+  const [error, setError] = createSignal<Error | null>(providerError());
+  const [isLoading, setIsLoading] = createSignal(providerLoading());
 
-  useEffect(() => {
-    let active = true;
-
-    if (providerError) {
+  createEffect(() => {
+    if (providerError()) {
       setAllowed(false);
-      setError(providerError);
+      setError(providerError());
       setIsLoading(false);
-      return () => {
-        active = false;
-      };
+      return;
     }
 
-    if (providerLoading) {
+    if (providerLoading()) {
       setAllowed(false);
       setError(null);
       setIsLoading(true);
-      return () => {
-        active = false;
-      };
+      return;
     }
+
+    let active = true;
+    onCleanup(() => {
+      active = false;
+    });
 
     async function checkPermission() {
       setIsLoading(true);
@@ -132,48 +119,36 @@ export function useCanAny(actions: string[], resource: string): CasbinPermission
     }
 
     void checkPermission();
+  });
 
-    return () => {
-      active = false;
-    };
-  }, [actions, canAny, providerError, providerLoading, resource]);
-
-  return useMemo(
-    () => ({
-      allowed,
-      isLoading,
-      error,
-    }),
-    [allowed, error, isLoading]
-  );
+  return { allowed, isLoading, error };
 }
 
 export function useCanAll(actions: string[], resource: string): CasbinPermissionResult {
   const { canAll, isLoading: providerLoading, error: providerError } = useCasbin();
-  const [allowed, setAllowed] = useState(false);
-  const [error, setError] = useState<Error | null>(providerError);
-  const [isLoading, setIsLoading] = useState(providerLoading);
+  const [allowed, setAllowed] = createSignal(false);
+  const [error, setError] = createSignal<Error | null>(providerError());
+  const [isLoading, setIsLoading] = createSignal(providerLoading());
 
-  useEffect(() => {
-    let active = true;
-
-    if (providerError) {
+  createEffect(() => {
+    if (providerError()) {
       setAllowed(false);
-      setError(providerError);
+      setError(providerError());
       setIsLoading(false);
-      return () => {
-        active = false;
-      };
+      return;
     }
 
-    if (providerLoading) {
+    if (providerLoading()) {
       setAllowed(false);
       setError(null);
       setIsLoading(true);
-      return () => {
-        active = false;
-      };
+      return;
     }
+
+    let active = true;
+    onCleanup(() => {
+      active = false;
+    });
 
     async function checkPermission() {
       setIsLoading(true);
@@ -200,18 +175,7 @@ export function useCanAll(actions: string[], resource: string): CasbinPermission
     }
 
     void checkPermission();
+  });
 
-    return () => {
-      active = false;
-    };
-  }, [actions, canAll, providerError, providerLoading, resource]);
-
-  return useMemo(
-    () => ({
-      allowed,
-      isLoading,
-      error,
-    }),
-    [allowed, error, isLoading]
-  );
+  return { allowed, isLoading, error };
 }
