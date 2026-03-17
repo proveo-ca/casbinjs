@@ -1,12 +1,12 @@
 import React from 'react';
-import { waitFor } from '@testing-library/react';
+import { screen, waitFor } from '@testing-library/react';
 import { createAuthorizer } from '@casbinjs/core';
 import { describe, expect, it } from 'vitest';
 import { getEndpointResponseFixture, toAuthorizerOptions } from './fixtures/endpoint-response';
 import { MODEL_FIXTURE } from './fixtures/model';
 import { renderHookTest } from './utils/test-hook';
 import { CasbinProvider } from '../provider';
-import type { CasbinContextValue, CasbinPermissionResult } from '../types';
+import type { CasbinContextValue } from '../types';
 import { useCan, useCanAll, useCanAny, useCasbin } from '../use-casbin';
 
 type HookResult = Pick<
@@ -23,7 +23,10 @@ type HookResult = Pick<
   | 'getEnforcer'
 >;
 
-function renderCasbinHook<TResult>(hook: () => TResult, wrapper?: React.ComponentType<{ children: React.ReactNode }>) {
+function renderCasbinHook<TResult>(
+  hook: () => TResult,
+  wrapper?: React.ComponentType<{ children: React.ReactNode }>
+) {
   let latestResult: TResult | undefined;
 
   renderHookTest({
@@ -44,6 +47,60 @@ function renderCasbinHook<TResult>(hook: () => TResult, wrapper?: React.Componen
       return latestResult;
     },
   };
+}
+
+function UseCanView({
+  action,
+  resource,
+}: {
+  action: string;
+  resource: string;
+}) {
+  const { allowed, isLoading, error } = useCan(action, resource);
+
+  return (
+    <>
+      <div data-testid="allowed">{String(allowed)}</div>
+      <div data-testid="loading">{String(isLoading)}</div>
+      <div data-testid="error">{error?.message ?? ''}</div>
+    </>
+  );
+}
+
+function UseCanAnyView({
+  actions,
+  resource,
+}: {
+  actions: string[];
+  resource: string;
+}) {
+  const { allowed, isLoading, error } = useCanAny(actions, resource);
+
+  return (
+    <>
+      <div data-testid="allowed">{String(allowed)}</div>
+      <div data-testid="loading">{String(isLoading)}</div>
+      <div data-testid="error">{error?.message ?? ''}</div>
+    </>
+  );
+}
+
+function UseCanAllView({
+  actions,
+  resource,
+}: {
+  actions: string[];
+  resource: string;
+}) {
+  const { allowed, isLoading, error } = useCanAll(actions, resource);
+
+  return (
+    <>
+      <div data-testid="allowed">{String(allowed)}</div>
+      <div data-testid="loading">{String(isLoading)}</div>
+      <div data-testid="error">{error?.message ?? ''}</div>
+    </>
+  );
 }
 
 async function createFixtureAuthorizer() {
@@ -123,17 +180,16 @@ describe('@casbinjs/react integration', () => {
       return <CasbinProvider authorizer={authorizer}>{children}</CasbinProvider>;
     }
 
-    const { getResult } = renderCasbinHook<CasbinPermissionResult>(
-      () => useCan('read', 'document:123'),
-      WrapperWithAuthorizer
-    );
+    renderHookTest({
+      hook: () => <UseCanView action="read" resource="document:123" />,
+      props: {},
+      wrapper: WrapperWithAuthorizer,
+    });
 
     await waitFor(() => {
-      const result = getResult();
-
-      expect(result.isLoading).toBe(false);
-      expect(result.error).toBeNull();
-      expect(result.allowed).toBe(true);
+      expect(screen.getByTestId('loading').textContent).toBe('false');
+      expect(screen.getByTestId('error').textContent).toBe('');
+      expect(screen.getByTestId('allowed').textContent).toBe('true');
     });
   });
 
@@ -149,17 +205,16 @@ describe('@casbinjs/react integration', () => {
       return <CasbinProvider authorizer={authorizer}>{children}</CasbinProvider>;
     }
 
-    const { getResult } = renderCasbinHook<CasbinPermissionResult>(
-      () => useCanAny(['read', 'update'], 'document:123'),
-      WrapperWithAuthorizer
-    );
+    renderHookTest({
+      hook: () => <UseCanAnyView actions={['read', 'update']} resource="document:123" />,
+      props: {},
+      wrapper: WrapperWithAuthorizer,
+    });
 
     await waitFor(() => {
-      const result = getResult();
-
-      expect(result.isLoading).toBe(false);
-      expect(result.error).toBeNull();
-      expect(result.allowed).toBe(true);
+      expect(screen.getByTestId('loading').textContent).toBe('false');
+      expect(screen.getByTestId('error').textContent).toBe('');
+      expect(screen.getByTestId('allowed').textContent).toBe('true');
     });
   });
 
@@ -175,17 +230,16 @@ describe('@casbinjs/react integration', () => {
       return <CasbinProvider authorizer={authorizer}>{children}</CasbinProvider>;
     }
 
-    const { getResult } = renderCasbinHook<CasbinPermissionResult>(
-      () => useCanAll(['read', 'update'], 'document:123'),
-      WrapperWithAuthorizer
-    );
+    renderHookTest({
+      hook: () => <UseCanAllView actions={['read', 'update']} resource="document:123" />,
+      props: {},
+      wrapper: WrapperWithAuthorizer,
+    });
 
     await waitFor(() => {
-      const result = getResult();
-
-      expect(result.isLoading).toBe(false);
-      expect(result.error).toBeNull();
-      expect(result.allowed).toBe(false);
+      expect(screen.getByTestId('loading').textContent).toBe('false');
+      expect(screen.getByTestId('error').textContent).toBe('');
+      expect(screen.getByTestId('allowed').textContent).toBe('false');
     });
   });
 
