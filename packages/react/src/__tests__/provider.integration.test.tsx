@@ -1,5 +1,5 @@
 import React from 'react';
-import { act, render, screen, waitFor } from '@testing-library/react';
+import { act, render, waitFor } from '@testing-library/react';
 import { createAuthorizer } from '@casbinjs/core';
 import { describe, expect, it } from 'vitest';
 import { getEndpointResponseFixture, toAuthorizerOptions } from './fixtures/endpoint-response';
@@ -111,18 +111,14 @@ describe('@casbinjs/react integration', () => {
     const authorizer = await createFixtureAuthorizer();
     let latestResult: HookResult | undefined;
 
-    function WrapperWithAuthorizer({ children }: { children: React.ReactNode }) {
-      return <CasbinProvider authorizer={authorizer}>{children}</CasbinProvider>;
-    }
-
     render(
-      <WrapperWithAuthorizer>
+      <CasbinProvider authorizer={authorizer}>
         <UseCasbinProbe
           onResult={(result) => {
             latestResult = result;
           }}
         />
-      </WrapperWithAuthorizer>
+      </CasbinProvider>
     );
 
     await waitFor(() => {
@@ -138,27 +134,19 @@ describe('@casbinjs/react integration', () => {
     const response = getEndpointResponseFixture();
     let latestResult: HookResult | undefined;
 
-    function WrapperWithOptions({ children }: { children: React.ReactNode }) {
-      return (
-        <CasbinProvider
-          options={{
-            ...toAuthorizerOptions(response),
-            model: MODEL_FIXTURE,
-          }}
-        >
-          {children}
-        </CasbinProvider>
-      );
-    }
-
     render(
-      <WrapperWithOptions>
+      <CasbinProvider
+        options={{
+          ...toAuthorizerOptions(response),
+          model: MODEL_FIXTURE,
+        }}
+      >
         <UseCasbinProbe
           onResult={(result) => {
             latestResult = result;
           }}
         />
-      </WrapperWithOptions>
+      </CasbinProvider>
     );
 
     await waitFor(() => {
@@ -180,20 +168,16 @@ describe('@casbinjs/react integration', () => {
       policies: [['p', 'alice', 'document:123', 'org-1', 'read', 'allow']],
     });
 
-    function WrapperWithAuthorizer({ children }: { children: React.ReactNode }) {
-      return <CasbinProvider authorizer={authorizer}>{children}</CasbinProvider>;
-    }
-
-    render(
-      <WrapperWithAuthorizer>
+    const view = render(
+      <CasbinProvider authorizer={authorizer}>
         <UseCanView action="read" resource="document:123" />
-      </WrapperWithAuthorizer>
+      </CasbinProvider>
     );
 
     await waitFor(() => {
-      expect(screen.getByTestId('loading').textContent).toBe('false');
-      expect(screen.getByTestId('error').textContent).toBe('');
-      expect(screen.getByTestId('allowed').textContent).toBe('true');
+      expect(view.getByTestId('loading').textContent).toBe('false');
+      expect(view.getByTestId('error').textContent).toBe('');
+      expect(view.getByTestId('allowed').textContent).toBe('true');
     });
   });
 
@@ -205,20 +189,16 @@ describe('@casbinjs/react integration', () => {
       policies: [['p', 'alice', 'document:123', 'org-1', 'read', 'allow']],
     });
 
-    function WrapperWithAuthorizer({ children }: { children: React.ReactNode }) {
-      return <CasbinProvider authorizer={authorizer}>{children}</CasbinProvider>;
-    }
-
-    render(
-      <WrapperWithAuthorizer>
+    const view = render(
+      <CasbinProvider authorizer={authorizer}>
         <UseCanAnyView actions={['read', 'update']} resource="document:123" />
-      </WrapperWithAuthorizer>
+      </CasbinProvider>
     );
 
     await waitFor(() => {
-      expect(screen.getByTestId('loading').textContent).toBe('false');
-      expect(screen.getByTestId('error').textContent).toBe('');
-      expect(screen.getByTestId('allowed').textContent).toBe('true');
+      expect(view.getByTestId('loading').textContent).toBe('false');
+      expect(view.getByTestId('error').textContent).toBe('');
+      expect(view.getByTestId('allowed').textContent).toBe('true');
     });
   });
 
@@ -230,20 +210,16 @@ describe('@casbinjs/react integration', () => {
       policies: [['p', 'alice', 'document:123', 'org-1', 'read', 'allow']],
     });
 
-    function WrapperWithAuthorizer({ children }: { children: React.ReactNode }) {
-      return <CasbinProvider authorizer={authorizer}>{children}</CasbinProvider>;
-    }
-
-    render(
-      <WrapperWithAuthorizer>
+    const view = render(
+      <CasbinProvider authorizer={authorizer}>
         <UseCanAllView actions={['read', 'update']} resource="document:123" />
-      </WrapperWithAuthorizer>
+      </CasbinProvider>
     );
 
     await waitFor(() => {
-      expect(screen.getByTestId('loading').textContent).toBe('false');
-      expect(screen.getByTestId('error').textContent).toBe('');
-      expect(screen.getByTestId('allowed').textContent).toBe('false');
+      expect(view.getByTestId('loading').textContent).toBe('false');
+      expect(view.getByTestId('error').textContent).toBe('');
+      expect(view.getByTestId('allowed').textContent).toBe('false');
     });
   });
 
@@ -256,18 +232,14 @@ describe('@casbinjs/react integration', () => {
     });
     let latestResult: HookResult | undefined;
 
-    function WrapperWithAuthorizer({ children }: { children: React.ReactNode }) {
-      return <CasbinProvider authorizer={authorizer}>{children}</CasbinProvider>;
-    }
-
     render(
-      <WrapperWithAuthorizer>
+      <CasbinProvider authorizer={authorizer}>
         <UseCasbinProbe
           onResult={(result) => {
             latestResult = result;
           }}
         />
-      </WrapperWithAuthorizer>
+      </CasbinProvider>
     );
 
     await waitFor(() => {
@@ -294,18 +266,14 @@ describe('@casbinjs/react integration', () => {
     });
     let latestResult: HookResult | undefined;
 
-    function WrapperWithAuthorizer({ children }: { children: React.ReactNode }) {
-      return <CasbinProvider authorizer={authorizer}>{children}</CasbinProvider>;
-    }
-
     render(
-      <WrapperWithAuthorizer>
+      <CasbinProvider authorizer={authorizer}>
         <UseCasbinProbe
           onResult={(result) => {
             latestResult = result;
           }}
         />
-      </WrapperWithAuthorizer>
+      </CasbinProvider>
     );
 
     await waitFor(() => {
@@ -334,18 +302,14 @@ describe('@casbinjs/react integration', () => {
     const authorizer = await createFixtureAuthorizer();
     let latestResult: HookResult | undefined;
 
-    function WrapperWithAuthorizer({ children }: { children: React.ReactNode }) {
-      return <CasbinProvider authorizer={authorizer}>{children}</CasbinProvider>;
-    }
-
     render(
-      <WrapperWithAuthorizer>
+      <CasbinProvider authorizer={authorizer}>
         <UseCasbinProbe
           onResult={(result) => {
             latestResult = result;
           }}
         />
-      </WrapperWithAuthorizer>
+      </CasbinProvider>
     );
 
     await waitFor(() => {
@@ -370,18 +334,14 @@ describe('@casbinjs/react integration', () => {
   it('exposes error state when neither authorizer nor options are provided', async () => {
     let latestResult: HookResult | undefined;
 
-    function EmptyWrapper({ children }: { children: React.ReactNode }) {
-      return <CasbinProvider>{children}</CasbinProvider>;
-    }
-
     render(
-      <EmptyWrapper>
+      <CasbinProvider>
         <UseCasbinProbe
           onResult={(result) => {
             latestResult = result;
           }}
         />
-      </EmptyWrapper>
+      </CasbinProvider>
     );
 
     await waitFor(() => {
@@ -399,18 +359,14 @@ describe('@casbinjs/react integration', () => {
   it('rejects addPolicy when authorizer is not ready', async () => {
     let latestResult: HookResult | undefined;
 
-    function EmptyWrapper({ children }: { children: React.ReactNode }) {
-      return <CasbinProvider>{children}</CasbinProvider>;
-    }
-
     render(
-      <EmptyWrapper>
+      <CasbinProvider>
         <UseCasbinProbe
           onResult={(result) => {
             latestResult = result;
           }}
         />
-      </EmptyWrapper>
+      </CasbinProvider>
     );
 
     await waitFor(() => {
