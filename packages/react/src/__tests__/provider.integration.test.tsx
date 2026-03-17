@@ -4,7 +4,7 @@ import { createAuthorizer } from '@casbinjs/core';
 import { describe, expect, it } from 'vitest';
 import { getEndpointResponseFixture, toAuthorizerOptions } from './fixtures/endpoint-response';
 import { MODEL_FIXTURE } from './fixtures/model';
-import { TestHook, renderHookTest } from './utils/test-hook';
+import { renderHookTest } from './utils/test-hook';
 import { CasbinProvider } from '../provider';
 import type { CasbinContextValue } from '../types';
 import { useCan, useCanAll, useCanAny, useCasbin } from '../use-casbin';
@@ -22,6 +22,20 @@ type HookResult = Pick<
   | 'replacePolicies'
   | 'getEnforcer'
 >;
+
+function UseCasbinProbe({
+  onResult,
+}: {
+  onResult: (result: HookResult) => void;
+}) {
+  const result = useCasbin();
+
+  React.useEffect(() => {
+    onResult(result);
+  }, [onResult, result]);
+
+  return null;
+}
 
 function UseCanView({
   action,
@@ -89,7 +103,7 @@ async function createFixtureAuthorizer() {
 describe('@casbinjs/react integration', () => {
   it('throws when useCasbin is used outside CasbinProvider', () => {
     expect(() => renderHookTest({ hook: () => useCasbin(), props: {} })).toThrow(
-      'useCasbin must be used within an CasbinProvider'
+      'useCasbin must be used within a CasbinProvider'
     );
   });
 
@@ -102,16 +116,13 @@ describe('@casbinjs/react integration', () => {
     }
 
     render(
-      <TestHook
-        hook={() => useCasbin()}
-        props={{}}
-        onResult={(result) => {
-          latestResult = result;
-        }}
-      />,
-      {
-        wrapper: WrapperWithAuthorizer,
-      }
+      <WrapperWithAuthorizer>
+        <UseCasbinProbe
+          onResult={(result) => {
+            latestResult = result;
+          }}
+        />
+      </WrapperWithAuthorizer>
     );
 
     await waitFor(() => {
@@ -141,16 +152,13 @@ describe('@casbinjs/react integration', () => {
     }
 
     render(
-      <TestHook
-        hook={() => useCasbin()}
-        props={{}}
-        onResult={(result) => {
-          latestResult = result;
-        }}
-      />,
-      {
-        wrapper: WrapperWithOptions,
-      }
+      <WrapperWithOptions>
+        <UseCasbinProbe
+          onResult={(result) => {
+            latestResult = result;
+          }}
+        />
+      </WrapperWithOptions>
     );
 
     await waitFor(() => {
@@ -176,9 +184,11 @@ describe('@casbinjs/react integration', () => {
       return <CasbinProvider authorizer={authorizer}>{children}</CasbinProvider>;
     }
 
-    render(<UseCanView action="read" resource="document:123" />, {
-      wrapper: WrapperWithAuthorizer,
-    });
+    render(
+      <WrapperWithAuthorizer>
+        <UseCanView action="read" resource="document:123" />
+      </WrapperWithAuthorizer>
+    );
 
     await waitFor(() => {
       expect(screen.getByTestId('loading').textContent).toBe('false');
@@ -199,9 +209,11 @@ describe('@casbinjs/react integration', () => {
       return <CasbinProvider authorizer={authorizer}>{children}</CasbinProvider>;
     }
 
-    render(<UseCanAnyView actions={['read', 'update']} resource="document:123" />, {
-      wrapper: WrapperWithAuthorizer,
-    });
+    render(
+      <WrapperWithAuthorizer>
+        <UseCanAnyView actions={['read', 'update']} resource="document:123" />
+      </WrapperWithAuthorizer>
+    );
 
     await waitFor(() => {
       expect(screen.getByTestId('loading').textContent).toBe('false');
@@ -222,9 +234,11 @@ describe('@casbinjs/react integration', () => {
       return <CasbinProvider authorizer={authorizer}>{children}</CasbinProvider>;
     }
 
-    render(<UseCanAllView actions={['read', 'update']} resource="document:123" />, {
-      wrapper: WrapperWithAuthorizer,
-    });
+    render(
+      <WrapperWithAuthorizer>
+        <UseCanAllView actions={['read', 'update']} resource="document:123" />
+      </WrapperWithAuthorizer>
+    );
 
     await waitFor(() => {
       expect(screen.getByTestId('loading').textContent).toBe('false');
@@ -247,16 +261,13 @@ describe('@casbinjs/react integration', () => {
     }
 
     render(
-      <TestHook
-        hook={() => useCasbin()}
-        props={{}}
-        onResult={(result) => {
-          latestResult = result;
-        }}
-      />,
-      {
-        wrapper: WrapperWithAuthorizer,
-      }
+      <WrapperWithAuthorizer>
+        <UseCasbinProbe
+          onResult={(result) => {
+            latestResult = result;
+          }}
+        />
+      </WrapperWithAuthorizer>
     );
 
     await waitFor(() => {
@@ -288,16 +299,13 @@ describe('@casbinjs/react integration', () => {
     }
 
     render(
-      <TestHook
-        hook={() => useCasbin()}
-        props={{}}
-        onResult={(result) => {
-          latestResult = result;
-        }}
-      />,
-      {
-        wrapper: WrapperWithAuthorizer,
-      }
+      <WrapperWithAuthorizer>
+        <UseCasbinProbe
+          onResult={(result) => {
+            latestResult = result;
+          }}
+        />
+      </WrapperWithAuthorizer>
     );
 
     await waitFor(() => {
@@ -331,16 +339,13 @@ describe('@casbinjs/react integration', () => {
     }
 
     render(
-      <TestHook
-        hook={() => useCasbin()}
-        props={{}}
-        onResult={(result) => {
-          latestResult = result;
-        }}
-      />,
-      {
-        wrapper: WrapperWithAuthorizer,
-      }
+      <WrapperWithAuthorizer>
+        <UseCasbinProbe
+          onResult={(result) => {
+            latestResult = result;
+          }}
+        />
+      </WrapperWithAuthorizer>
     );
 
     await waitFor(() => {
@@ -370,16 +375,13 @@ describe('@casbinjs/react integration', () => {
     }
 
     render(
-      <TestHook
-        hook={() => useCasbin()}
-        props={{}}
-        onResult={(result) => {
-          latestResult = result;
-        }}
-      />,
-      {
-        wrapper: EmptyWrapper,
-      }
+      <EmptyWrapper>
+        <UseCasbinProbe
+          onResult={(result) => {
+            latestResult = result;
+          }}
+        />
+      </EmptyWrapper>
     );
 
     await waitFor(() => {
@@ -402,16 +404,13 @@ describe('@casbinjs/react integration', () => {
     }
 
     render(
-      <TestHook
-        hook={() => useCasbin()}
-        props={{}}
-        onResult={(result) => {
-          latestResult = result;
-        }}
-      />,
-      {
-        wrapper: EmptyWrapper,
-      }
+      <EmptyWrapper>
+        <UseCasbinProbe
+          onResult={(result) => {
+            latestResult = result;
+          }}
+        />
+      </EmptyWrapper>
     );
 
     await waitFor(() => {
