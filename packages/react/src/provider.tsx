@@ -1,8 +1,8 @@
+import type { Authorizer } from '@casbinjs/core';
 import { createAuthorizer } from '@casbinjs/core';
 import { useEffect, useMemo, useState } from 'react';
 import { CasbinContext } from './context';
 import type { CasbinProviderProps } from './types';
-import type { AuthorizationPayload, Authorizer } from '@casbinjs/core';
 
 function createNotReadyError(): Error {
   return new Error('Authorizer is not ready');
@@ -91,12 +91,26 @@ export function CasbinProvider({
 
         return authorizer.canAll(actions, resource);
       },
-      async replacePayload(payload: AuthorizationPayload): Promise<void> {
+      async addPolicy(policy: string[]): Promise<void> {
         if (!authorizer) {
           throw createNotReadyError();
         }
 
-        await authorizer.replacePayload(payload);
+        await authorizer.addPolicy(policy);
+      },
+      async removePolicy(policy: string[]): Promise<void> {
+        if (!authorizer) {
+          throw createNotReadyError();
+        }
+
+        await authorizer.removePolicy(policy);
+      },
+      async replacePolicies(policies: string[][]): Promise<void> {
+        if (!authorizer) {
+          throw createNotReadyError();
+        }
+
+        await authorizer.replacePolicies(policies);
       },
       getEnforcer() {
         return authorizer?.getEnforcer() ?? null;

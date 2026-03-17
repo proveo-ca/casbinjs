@@ -41,5 +41,6 @@ playwright-report/
 test-results/
 
 # Misc tool state
+.local
 .aider*
 .pki

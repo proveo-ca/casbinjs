@@ -7,7 +7,7 @@ actor ConsumerApp as Consumer
 participant "External Endpoint" as Endpoint
 box "casbinjs/core"
 participant "Authorizer Facade" as Authorizer
-participant "Input Normalizer / Facade State" as FacadeLayer
+participant "Policy Snapshot" as PolicySnapshot
 participant "Enforcer Factory" as Factory
 end box
 box "casbin-core"
@@ -16,62 +16,66 @@ end box
 
 == Initialization ==
 
-Consumer -> Endpoint : fetch authorization payload
-Endpoint --> Consumer : AuthorizationPayload
-Consumer -> Authorizer : replacePayload(payload)\nor createAuthorizer(...)
-Authorizer -> FacadeLayer : normalize payload / update facade state
+Consumer -> Endpoint : fetch authorization data
+Endpoint --> Consumer : policy snapshot
+Consumer -> Authorizer : createAuthorizer(...)
+Authorizer -> PolicySnapshot : initialize policy snapshot
 Authorizer -> Factory : build / configure enforcer
 Factory -> Enforcer : initialize with model / policies
 
 == Permission checks ==
 
 Consumer -> Authorizer : can(action, resource)
-Authorizer -> Enforcer : enforce(...)
+Authorizer -> Enforcer : enforce(subject, resource, optional scope, action)
 Enforcer --> Authorizer : allow / deny
 Authorizer --> Consumer : boolean
 
 Consumer -> Authorizer : canAny(actions, resource)
 loop each action
-  Authorizer -> Enforcer : enforce(...)
+  Authorizer -> Enforcer : enforce(subject, resource, optional scope, action)
   Enforcer --> Authorizer : result
 end
 Authorizer --> Consumer : boolean
 
 Consumer -> Authorizer : canAll(actions, resource)
 loop each action
-  Authorizer -> Enforcer : enforce(...)
+  Authorizer -> Enforcer : enforce(subject, resource, optional scope, action)
   Enforcer --> Authorizer : result
 end
 Authorizer --> Consumer : boolean
 
-== Local facade mutation only ==
+== Policy mutation ==
 
-Consumer -> Authorizer : addPermission(permission)
-Authorizer -> FacadeLayer : update local facade state
+Consumer -> Authorizer : addPolicy(policy)
+Authorizer -> PolicySnapshot : append policy row
+Authorizer -> Enforcer : apply policy mutation
 
-Consumer -> Authorizer : removePermission(permission)
-Authorizer -> FacadeLayer : update local facade state
+Consumer -> Authorizer : removePolicy(policy)
+Authorizer -> PolicySnapshot : remove policy row
+Authorizer -> Enforcer : apply policy removal
+
+Consumer -> Authorizer : replacePolicies(policies)
+Authorizer -> PolicySnapshot : replace full policy snapshot
+Authorizer -> Enforcer : rebuild effective policies
 
 == Consumer-owned backend sync ==
 
-group Canonical refetch
-  Consumer -> Endpoint : persist mutation
-  Endpoint --> Consumer : success
-  Consumer -> Endpoint : refetch authorization payload
-  Endpoint --> Consumer : updated AuthorizationPayload
-  Consumer -> Authorizer : replacePayload(payload)
+group Canonical policy snapshot refetch
+  Consumer -> Endpoint : refetch policy snapshot
+  Endpoint --> Consumer : updated policies
+  Consumer -> Authorizer : replacePolicies(policies)
 end
 
 group Optimistic update with reconciliation
-  Consumer -> Authorizer : addPermission(permission)
-  Authorizer -> FacadeLayer : optimistic local update
+  Consumer -> Authorizer : removePolicy(policy)
+  Authorizer -> PolicySnapshot : optimistic local removal
   Consumer -> Endpoint : persist mutation
   alt backend success
-    Endpoint --> Consumer : canonical updated payload
-    Consumer -> Authorizer : replacePayload(payload)
+    Endpoint --> Consumer : canonical updated policies
+    Consumer -> Authorizer : replacePolicies(policies)
   else backend failure
-    Endpoint --> Consumer : error
-    Consumer -> Authorizer : removePermission(permission)\nor rollback state
+    Endpoint --> Consumer : canonical policies with original rule present
+    Consumer -> Authorizer : replacePolicies(policies)
   end
 end
 
@@ -81,12 +85,10 @@ casbinjs/core does not fetch or persist.
 The consumer owns API integration.
 end note
 
-note over Authorizer,FacadeLayer
-casbinjs/core owns:
-- facade initialization
-- input normalization
-- local wrapper state
-- consumer-facing convenience APIs
+note over Authorizer,PolicySnapshot
+replacePolicies(policies):
+- replaces the full in-memory policy snapshot
+- acts as canonical reconciliation input
 end note
 
 note over Enforcer
@@ -97,6 +99,9 @@ casbin-core owns:
 end note
 
 note over Authorizer
+organization is optional and acts as scope
+when delegating enforcement.
+
 Worker-backed execution may be added later,
 but the initial core design remains in-process.
 end note

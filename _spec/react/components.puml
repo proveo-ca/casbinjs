@@ -12,11 +12,10 @@ package "Consumer App" {
 }
 
 package "casbinjs/react" {
-  interface "useAuthz()" as UseAuthz
-  interface "usePermissionsEnforcer()" as UsePermissionsEnforcer
-  component "AuthzProvider" as Provider
+  interface "useCasbin()" as UseCasbin
+  interface "useCan() / useCanAny() / useCanAll()" as UsePermissionHooks
+  component "CasbinProvider" as Provider
   component "React Context" as Context
-  component "React Helpers" as Helpers
 }
 
 package "casbinjs/core" {
@@ -26,17 +25,15 @@ package "casbinjs/core" {
 database "External Endpoint / Data Source" as Endpoint
 
 Consumer <-- UI
-Endpoint ---> Fetching : AuthorizationPayload
+Endpoint ---> Fetching : policy snapshot
 
-Fetching --> Provider : pass authorizer or payload
+Fetching --> Provider : pass authorizer or options
 Provider -> Context : provide authz state
 Provider ---> Authorizer : create / use authorizer
-Helpers --> UseAuthz
-Helpers --> UsePermissionsEnforcer
-UseAuthz <-- Context : consume authorizer state
-UsePermissionsEnforcer --> UseAuthz : build convenience helpers
-UI <-- UseAuthz : can / canAny / canAll
-UI <-- UsePermissionsEnforcer : canView / canUpdate / etc.
+UseCasbin <-- Context : consume authorizer state
+UsePermissionHooks <-- UseCasbin : derive React-friendly permission state
+UI <-- UseCasbin : addPolicy / removePolicy / replacePolicies
+UI <-- UsePermissionHooks : allowed / isLoading / error
 
 note top of Fetching
 Application-owned fetching.
@@ -48,7 +45,13 @@ casbinjs/react owns:
 - provider wiring
 - context integration
 - React-ready hooks
-- convenience helpers
+- async readiness / error state
+end note
+
+note bottom of UsePermissionHooks
+Hook-level async wrappers for permission checks.
+Avoid forcing consumers to write useEffect
+for common can / canAny / canAll usage.
 end note
 
 note top of Authorizer

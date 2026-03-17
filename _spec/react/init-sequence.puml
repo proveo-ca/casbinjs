@@ -10,28 +10,34 @@ box "casbinjs/core"
 participant "Authorizer" as Authorizer
 end box
 box "casbinjs/react"
-participant "AuthzProvider" as Provider
+participant "CasbinProvider" as Provider
 participant "React Context" as Context
+participant "useCan()" as UseCan
 end box
 participant "Child Component" as Child
 
 App -> FetchLayer : request authz data
-FetchLayer -> Endpoint : fetch AuthorizationPayload
-Endpoint --> FetchLayer : AuthorizationPayload
+FetchLayer -> Endpoint : fetch authorization data
+Endpoint --> FetchLayer : policy snapshot
 
 alt app constructs authorizer before render
-  FetchLayer -> Authorizer : createAuthorizer(payload)
+  FetchLayer -> Authorizer : createAuthorizer(options)
   FetchLayer --> App : authorizer
   App -> Provider : render with authorizer
-else provider receives payload-derived input
-  FetchLayer --> App : payload
-  App -> Provider : render with payload / config
+else provider receives options
+  FetchLayer --> App : derived options
+  App -> Provider : render with options
   Provider -> Authorizer : create / update authorizer
 end
 
 Provider -> Context : publish authorizer state
-Child -> Context : consume via useAuthz()
-Context --> Child : can / canAny / canAll / helpers
+Child -> Context : consume via useCasbin() or useCan()
+Context --> Child : can / canAny / canAll /\naddPolicy / removePolicy / replacePolicies
+
+Child -> UseCan : useCan(action, resource)
+UseCan -> Context : consume context
+Context --> UseCan : authorizer helpers + readiness
+UseCan --> Child : allowed / isLoading / error
 
 note over FetchLayer,Endpoint
 API access belongs to the consumer app.

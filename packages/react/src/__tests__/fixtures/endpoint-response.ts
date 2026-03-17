@@ -18,6 +18,5 @@ export function toAuthorizerOptions(
     subject: response.subject,
     organization: response.organization,
     policies: response.policies,
-    permissions: [],
   };
 }

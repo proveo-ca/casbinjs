@@ -1,5 +1,81 @@
 # ROADMAP: Casbin-Core JS Library
 
+## Contributor Guidance
+
+This file serves as roadmap context and implementation guidance for contributors making changes to this repository.
+
+### Current implementation boundaries
+
+Preserve these boundaries when making changes:
+
+- `casbin-core` is the enforcement engine
+- `@casbinjs/core` is the framework-agnostic authorizer facade
+- `@casbinjs/react` is a thin React integration layer over the core package
+- applications own fetching, persistence, reconciliation, and optimistic update strategy
+
+### Current policy-first model
+
+The current implementation is policy-first.
+
+There is one in-memory authorization source of truth:
+
+- the current policy snapshot
+
+Primary mutation APIs:
+
+- `addPolicy(policy)`
+- `removePolicy(policy)`
+- `replacePolicies(policies)`
+
+Contributors should preserve this model in:
+
+- implementation
+- docs
+- examples
+- tests
+- specs
+- naming
+- comments
+
+Do not reintroduce a second in-memory authorization layer without a strong reason and corresponding spec/doc updates.
+
+### Spec sync requirement
+
+Files under `_spec/` are design references and must stay aligned with implementation when public contracts or semantics change.
+
+Contributors must check whether their changes affect:
+
+- public data contracts
+- component or package boundaries
+- initialization flow
+- synchronization or mutation semantics
+- React integration behavior
+- documented usage flows
+
+If a change affects any of those areas, update the relevant existing `_spec` file.
+
+If no current spec file adequately represents the change, add a new `_spec` file instead of leaving the design undocumented.
+
+Current spec areas include:
+
+- `_spec/core/data-contracts.puml`
+- `_spec/core/components.puml`
+- `_spec/core/usage.puml`
+- `_spec/react/components.puml`
+- `_spec/react/init-sequence.puml`
+- `_spec/react/usage.puml`
+
+### Documentation expectations
+
+When updating docs:
+
+- explain React usage first, then plain core usage in human-facing docs
+- do not imply built-in fetching
+- do not imply built-in persistence
+- keep React framed as a thin wrapper over core
+- describe policies as the in-memory source of truth
+- describe `replacePolicies(...)` as canonical replacement from a server/API response
+
 ## High-Level Goal
 
 Build a lightweight, production-ready authorization library for JavaScript and TypeScript, powered by `casbin-core` v1.0.0 and exposing a simple API inspired by `casbin-js/src/CAuthorizer.ts`.
@@ -21,21 +97,20 @@ Example target interface:
 
 ```ts
 interface Authorizer {
-  getEnforcer(): Enforcer;
-  can(action: string, resource: string): boolean;
-  canAny(actions: string[], resource: string): boolean;
-  canAll(actions: string[], resource: string): boolean;
+  getEnforcer(): Enforcer | null;
+  can(action: string, resource: string): Promise<boolean>;
+  canAny(actions: string[], resource: string): Promise<boolean>;
+  canAll(actions: string[], resource: string): Promise<boolean>;
 }
 ```
 
 This interface may also expose convenience mutation methods such as:
 
-- `setPermissions(...)`
-- `addPermission(...)`
-- `removePermission(...)`
-- `replacePayload(...)`
+- `addPolicy(...)`
+- `removePolicy(...)`
+- `replacePolicies(...)`
 
-These methods should be understood as facade-level local state updates unless the consumer explicitly wires them into backend persistence.
+These methods should be understood as local in-memory policy updates unless the consumer explicitly wires them into backend persistence.
 
 ## Package Strategy
 
@@ -87,11 +162,9 @@ A core design rule is to keep the boundaries between packages explicit.
 ### `casbinjs/core` owns
 
 - a vanilla-ready `Authorizer` facade over `casbin-core`
-- input normalization from consumer-friendly payloads and options
 - ergonomic initialization contracts
 - convenience methods such as `can`, `canAny`, and `canAll`
-- facade-level local wrapper state
-- optional local-only mutation methods
+- in-memory policy snapshot mutation helpers
 - access to the underlying enforcer
 
 `casbinjs/core` should not re-implement enforcement semantics.
@@ -100,9 +173,8 @@ A core design rule is to keep the boundaries between packages explicit.
 
 - React provider wiring
 - React context integration
-- hooks such as `useAuthz()`
-- optional convenience hooks such as `usePermissionsEnforcer()`
-- React-ready consumption patterns built on top of `casbinjs/core`
+- hooks such as `useCasbin()`
+- optional convenience helpers built on top of `casbinjs/core`
 
 `casbinjs/react` should not own fetching, persistence, or core authorization semantics.
 
@@ -114,7 +186,7 @@ A core design rule is to keep the boundaries between packages explicit.
 - TypeScript first: strong typings, sensible defaults, and minimal friction for consumers
 - Client and server friendly: usable in browser apps, SSR environments, and backend services
 - Model-aware: preserve access to Casbin’s full model and policy capabilities
-- Incrementally adoptable: support both simple permission-grant initialization and fuller model/policy-driven flows
+- Incrementally adoptable: support direct policy initialization and policy replacement flows
 - Bundle conscious: avoid unnecessary dependencies in the core package
 - Consumer oriented: support provider and hook usage patterns without embedding data-fetching concerns
 
@@ -135,56 +207,39 @@ These are explicitly out of scope for the first release:
 
 A key requirement is defining the contract expected from an external endpoint.
 
-The consumer may use tRPC and React, but this library should remain agnostic. The library should accept a transport-friendly payload from any source and leave data fetching to the application.
+The consumer may use tRPC and React, but this library should remain agnostic. The library should accept a transport-friendly policy snapshot from any source and leave data fetching to the application.
 
 ### External endpoint contract
 
-The library should define a baseline payload shape that an arbitrary endpoint can return.
+The library should define a baseline policy snapshot shape that an arbitrary endpoint can return.
 
 Baseline example:
 
 ```ts
-interface PermissionGrant {
-  action: string;
-  resource: string;
-}
-
-interface AuthorizationPayload {
-  roles?: string[];
-  permissions: PermissionGrant[];
-}
+type PolicySnapshot = string[][];
 ```
 
-This payload should be:
+This contract should be:
 
 - serializable over HTTP or RPC
 - independent of framework and client library
-- simple enough for common frontend authorization use cases
 - sufficient to initialize the `casbinjs/core` authorizer facade
-- extensible later for richer Casbin policy data
+- compatible with Casbin model and grouping semantics
 
 The goal is not to prescribe a tRPC procedure, REST route, or GraphQL schema. The goal is to document the shape of the data the library expects when initializing authorization state.
 
 ### Core initialization contract
 
-The core package should accept authorization data derived from the external endpoint contract.
-
-Example:
+The core package should accept authorizer initialization data such as:
 
 ```ts
 interface AuthorizerOptions {
   model?: string;
-  permissions?: PermissionGrant[];
   policies?: string[][];
   subject?: string;
   organization?: string;
 }
 ```
-
-This allows the core package to support both:
-
-- a simplified permission-grant mode for common UI consumption
-- fuller model- and policy-driven initialization for advanced use cases
 
 ### React consumption contract
 
@@ -193,13 +248,13 @@ The React package should expose providers and hooks that operate on `casbinjs/co
 Applications should be able to:
 
 - fetch authorization data however they want
-- create or update an authorizer from that payload
-- pass either an authorizer or payload-derived input into React bindings
+- create or update an authorizer from that policy snapshot
+- pass either an authorizer or policy-derived input into React bindings
 - consume permission helpers through hooks
 
 Example application flow:
 
-1. application fetches authorization payload from an endpoint
+1. application fetches policy snapshot from an endpoint
 2. application creates or updates a `casbinjs/core` authorizer
 3. React provider exposes the current authorizer through context
 4. hooks expose `can`, `canAny`, `canAll`, and convenience helpers
@@ -210,10 +265,10 @@ A core planning decision is to keep synchronization responsibilities outside the
 
 `casbinjs/core` should own:
 
-- facade-level local wrapper state
+- in-memory policy snapshot
 - local permission checks
-- local in-memory mutation methods
-- hydration from caller-provided payloads, policies, or model data
+- local in-memory policy mutation methods
+- hydration from caller-provided policies or model data
 - delegation to `casbin-core`
 
 The consumer application should own:
@@ -223,7 +278,7 @@ The consumer application should own:
 - deciding between optimistic updates, canonical refetch, or reconciliation flows
 - handling backend failures and rollback behavior
 
-This means methods such as `addPermission(...)`, `removePermission(...)`, and `setPermissions(...)` should be treated as local facade update methods unless the consumer explicitly wires them into backend persistence flows.
+This means methods such as `addPolicy(...)`, `removePolicy(...)`, and `replacePolicies(...)` should be treated as local authorizer update methods unless the consumer explicitly wires them into backend persistence flows.
 
 Recommended mutation patterns:
 
@@ -231,7 +286,7 @@ Recommended mutation patterns:
 
 1. consumer sends mutation to backend
 2. backend persists updated authorization data
-3. consumer refetches the payload
+3. consumer refetches policies
 4. consumer replaces local authorizer state
 
 ### Optimistic update with reconciliation
@@ -258,7 +313,7 @@ Reasons:
 - not every runtime provides Web Workers
 - worker execution introduces async boundaries into a sync-friendly API
 - direct `getEnforcer()` access becomes more complicated if the enforcer lives in another thread
-- the initial consumer examples use relatively simple permission-grant inputs where in-process evaluation is likely sufficient
+- initial usage is expected to be in-process with policy snapshots already available in memory
 
 Recommendation:
 
@@ -276,17 +331,15 @@ Scope:
 
 - initialize repository and package layout
 - add `casbin-core@1.0.0`
-- define the transport-friendly authorization payload contract
+- define the transport-friendly policy snapshot contract
 - define the main `Authorizer` facade API
 - support constructing an authorizer from a model and policy set
-- support constructing an authorizer from flat permission grants
-- support a simple manual mode similar to `casbin-js`
 - expose `getEnforcer()`
 - implement:
   - `can(action, resource)`
   - `canAny(actions, resource)`
   - `canAll(actions, resource)`
-  - facade-level mutation methods such as `setPermissions`, `addPermission`, and `removePermission`
+  - policy mutation methods such as `addPolicy`, `removePolicy`, and `replacePolicies`
 
 Initial concerns to resolve:
 
@@ -294,38 +347,25 @@ Initial concerns to resolve:
 - how user, org, and subject should be represented in the API
 - how closely to mirror `casbin-js/src/CAuthorizer.ts`
 - whether to expose a class, factory functions, or both
-- whether initialization should accept payloads directly, or require explicit mapping first
 
 Suggested baseline API:
 
 ```ts
-interface PermissionGrant {
-  action: string;
-  resource: string;
-}
-
-interface AuthorizationPayload {
-  roles?: string[];
-  permissions: PermissionGrant[];
-}
-
 interface AuthorizerOptions {
   model?: string;
-  permissions?: PermissionGrant[];
   policies?: string[][];
   subject?: string;
   organization?: string;
 }
 
 interface Authorizer {
-  getEnforcer(): Enforcer;
-  can(action: string, resource: string): boolean;
-  canAny(actions: string[], resource: string): boolean;
-  canAll(actions: string[], resource: string): boolean;
-  setPermissions(permissions: PermissionGrant[]): void;
-  addPermission(permission: PermissionGrant): void;
-  removePermission(permission: PermissionGrant): void;
-  replacePayload(payload: AuthorizationPayload): void;
+  getEnforcer(): Enforcer | null;
+  can(action: string, resource: string): Promise<boolean>;
+  canAny(actions: string[], resource: string): Promise<boolean>;
+  canAll(actions: string[], resource: string): Promise<boolean>;
+  addPolicy(policy: string[]): Promise<void>;
+  removePolicy(policy: string[]): Promise<void>;
+  replacePolicies(policies: string[][]): Promise<void>;
 }
 ```
 
@@ -335,13 +375,13 @@ Notes:
 - the current sample model includes `sub`, `res`, `org`, and `act`, plus `g`, `g2`, and `g3`
 - the core API should not erase those concepts just to imitate a simpler two-argument interface
 - if needed, provide a simplified wrapper API while preserving access to the underlying enforcer
-- the core package should not know or care whether permissions came from tRPC, REST, GraphQL, server props, or local memory
-- facade-level mutation methods should not imply backend persistence
+- the core package should not know or care whether policies came from tRPC, REST, GraphQL, server props, or local memory
+- policy mutation methods should not imply backend persistence
 
 Deliverables:
 
 - `casbinjs/core` package
-- TypeScript types for endpoint payloads and authorizer initialization
+- TypeScript types for policy snapshots and authorizer initialization
 - unit tests
 - minimal README usage examples
 - documented initialization contract for external endpoints
@@ -353,31 +393,24 @@ Deliver a `casbinjs/react` package built on top of `casbinjs/core`.
 Scope:
 
 - React context provider
-- `useAuthorizer()` or `useAuthz()` hook
+- `useCasbin()` hook
+- `useCan()`, `useCanAny()`, and `useCanAll()`
 - support updating authorizer state from props
-- optional convenience hook such as `usePermissionsEnforcer()`
-- memoized permission checks where appropriate
+- optional convenience helpers
 - preserve compatibility with application-owned fetching logic
 
 Example target usage:
 
 ```tsx
-<AuthzProvider authorizer={authorizer}>
+<CasbinProvider authorizer={authorizer}>
   <App />
-</AuthzProvider>
+</CasbinProvider>
 ```
 
 ```tsx
-const { can, canAny, canAll, getEnforcer } = useAuthz();
+const { can, canAny, canAll, addPolicy, removePolicy, replacePolicies, getEnforcer } =
+  useCasbin();
 ```
-
-Possible additions:
-
-- provider that accepts a pre-fetched authorization payload and constructs the authorizer internally
-- convenience hook patterns similar to:
-  - `useAuthz()`
-  - `usePermissionsEnforcer()`
-- SSR-safe behavior
 
 Non-goals for this package:
 
@@ -422,7 +455,7 @@ Scope:
   - `g`, `g2`, `g3`
   - organization-aware checks
   - public subject handling
-- richer endpoint payload formats for advanced policy-based hydration
+- richer policy snapshot formats for advanced hydration
 - evaluate whether worker-backed authorizers deserve a dedicated package or runtime mode
 
 Deliverables:
@@ -437,7 +470,7 @@ Scope:
 
 - improve package READMEs
 - add migration notes for users familiar with `casbin-js`
-- document the expected endpoint contract clearly
+- document the expected policy snapshot contract clearly
 - document synchronization responsibilities clearly
 - document package boundaries clearly
 - benchmark basic authorization checks
@@ -474,25 +507,11 @@ Deliverables:
    - Or should it expose async checks to better match enforcer behavior in all environments?
    - If worker-backed execution is introduced later, should that be a separate async interface?
 
-4. Manual mode vs full model mode
-   - Should manual mode be a convenience layer in `casbinjs/core`?
-   - Or should the library focus first on full model/policy enforcement and add manual mode after?
-
-5. Endpoint contract scope
-   - Should the first stable endpoint contract be only:
-     ```ts
-     interface AuthorizationPayload {
-       roles?: string[];
-       permissions: PermissionGrant[];
-     }
-     ```
-   - Or should the initial contract already include optional support for policies, subject, organization, and model hints?
-
-6. React API shape
+4. React API shape
    - Should `casbinjs/react` primarily accept a ready-made `authorizer` instance?
-   - Or should it also accept raw authorization payloads and build the authorizer internally?
+   - Or should it also accept raw policy snapshots and build the authorizer internally?
 
-7. Framework packaging
+5. Framework packaging
    - Should `react` and `solid` live in the same monorepo from the start?
    - Current recommendation: yes, but keep them optional and thin.
 
@@ -503,7 +522,7 @@ Deliverables:
    - Fall back to scoped names if required by npm conventions
 
 2. Define the first stable external endpoint contract
-   - start with a minimal payload
+   - start with policy snapshots
    - ensure it is framework-agnostic and transport-agnostic
    - document how applications map endpoint responses into authorizer initialization
 
@@ -515,13 +534,12 @@ Deliverables:
 4. Define the first stable `Authorizer` facade interface
    - decide class vs factory
    - decide request signature
-   - decide manual mode support
-   - decide how endpoint payloads feed initialization
-   - define the semantics of local facade mutation methods
+   - decide how policy snapshots feed initialization
+   - define the semantics of local policy mutation methods
 
 5. Build the first `casbinjs/core` prototype
    - use `sample.config.ts` as the baseline model
-   - write tests for exact match, wildcard, org-scoped checks, grouped actions, and local mutation flows
+   - write tests for exact match, wildcard, org-scoped checks, grouped actions, and policy mutation flows
 
 6. Add `casbinjs/react`
    - keep it thin
@@ -534,10 +552,10 @@ Deliverables:
 The first milestone is successful if:
 
 - a consumer can install `casbinjs/core`
-- initialize an authorizer from a documented endpoint payload shape
+- initialize an authorizer from a documented policy snapshot shape
 - construct an authorizer with a model and policies when needed
 - call `can`, `canAny`, and `canAll`
-- mutate local facade state in memory
+- mutate local policy state in memory
 - access the underlying enforcer when needed
 - use the same core package from a React app through `casbinjs/react`
 - integrate with tRPC, REST, or any other fetching approach without library changes

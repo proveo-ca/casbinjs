@@ -7,9 +7,9 @@ actor ReactComponent as Component
 participant "Consumer Fetch Layer" as FetchLayer
 participant "External Endpoint" as Endpoint
 box "casbinjs/react"
-participant "AuthzProvider" as Provider
-participant "useAuthz()" as UseAuthz
-participant "usePermissionsEnforcer()" as UsePermissionsEnforcer
+participant "CasbinProvider" as Provider
+participant "useCasbin()" as UseCasbin
+participant "useCan() / useCanAny() / useCanAll()" as UsePermissionHooks
 end box
 box "casbinjs/core"
 participant "Authorizer" as Authorizer
@@ -17,30 +17,43 @@ end box
 
 == Initialization ==
 
-FetchLayer -> Endpoint : fetch AuthorizationPayload
-Endpoint --> FetchLayer : AuthorizationPayload
-FetchLayer -> Authorizer : create / replace payload
-FetchLayer -> Provider : render with authorizer\nor payload-derived state
+FetchLayer -> Endpoint : fetch authorization data
+Endpoint --> FetchLayer : policy snapshot
+FetchLayer -> Authorizer : createAuthorizer(options)
+FetchLayer -> Provider : render with authorizer\nor options
 Provider -> Authorizer : provide current authorizer via context
 
 == Hook consumption ==
 
-Component -> UseAuthz : useAuthz()
-UseAuthz -> Provider : consume context
-Provider --> UseAuthz : authorizer helpers
-UseAuthz --> Component : can / canAny / canAll / getEnforcer
+Component -> UseCasbin : useCasbin()
+UseCasbin -> Provider : consume context
+Provider --> UseCasbin : authorizer helpers
+UseCasbin --> Component : can / canAny / canAll /\naddPolicy / removePolicy / replacePolicies / getEnforcer
 
-Component -> UsePermissionsEnforcer : usePermissionsEnforcer()
-UsePermissionsEnforcer -> UseAuthz : compose base authz hook
-UseAuthz --> UsePermissionsEnforcer : can(...)
-UsePermissionsEnforcer --> Component : canView / canUpdate / canDelete / etc.
+Component -> UsePermissionHooks : useCan(...) / useCanAny(...) / useCanAll(...)
+UsePermissionHooks -> UseCasbin : use authorizer helpers
+UsePermissionHooks --> Component : allowed / isLoading / error
 
 == Permission checks ==
 
-Component -> UseAuthz : can(action, resourceType, resourceId)
-UseAuthz -> Authorizer : can(action, resourceKey)
-Authorizer --> UseAuthz : boolean
-UseAuthz --> Component : boolean
+Component -> UsePermissionHooks : useCan(action, resource)
+UsePermissionHooks -> Authorizer : can(action, resource)
+Authorizer --> UsePermissionHooks : boolean
+UsePermissionHooks --> Component : allowed state
+
+== Policy mutation ==
+
+Component -> UseCasbin : addPolicy(policy)
+UseCasbin -> Authorizer : addPolicy(policy)
+Authorizer --> UseCasbin : completed
+
+Component -> UseCasbin : removePolicy(policy)
+UseCasbin -> Authorizer : removePolicy(policy)
+Authorizer --> UseCasbin : completed
+
+Component -> UseCasbin : replacePolicies(policies)
+UseCasbin -> Authorizer : replacePolicies(policies)
+Authorizer --> UseCasbin : completed
 
 note over FetchLayer,Endpoint
 Fetching stays app-owned.
@@ -48,8 +61,13 @@ tRPC is one possible consumer choice,
 not part of the library contract.
 end note
 
-note over Provider,UsePermissionsEnforcer
+note over Provider,UseCasbin
 casbinjs/react is the ready-to-use React layer.
+end note
+
+note over UsePermissionHooks
+Permission hooks wrap async checks into
+React-friendly allowed / isLoading / error state.
 end note
 
 note over Authorizer

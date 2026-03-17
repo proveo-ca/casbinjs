@@ -1,27 +1,28 @@
 import { Enforcer } from 'casbin-core';
-import { Authorizer, AuthorizerOptions, AuthorizationPayload, PermissionGrant } from './types';
-import { FacadeState } from './state';
+import { Authorizer, AuthorizerOptions } from './types';
 import { EnforcerFactory } from './factory';
+
+function rowsEqual(left: string[], right: string[]): boolean {
+  if (left.length !== right.length) {
+    return false;
+  }
+
+  return left.every((value, index) => value === right[index]);
+}
 
 export class AuthorizerFacade implements Authorizer {
   private enforcer: Enforcer | null = null;
-  private state: FacadeState = new FacadeState();
   private subject = 'current_user';
   private organization = '';
   private ready: Promise<void> = Promise.resolve();
-  private basePolicies: string[][] = [];
+  private policySnapshot: string[][] = [];
 
   public async initialize(options: AuthorizerOptions = {}): Promise<void> {
     this.subject = options.subject || 'current_user';
     this.organization = options.organization || '';
-    this.basePolicies = options.policies ? options.policies.map((policy) => [...policy]) : [];
+    this.policySnapshot = options.policies ? options.policies.map((policy) => [...policy]) : [];
 
     this.enforcer = await EnforcerFactory.createEnforcer(options);
-
-    if (options.permissions) {
-      this.state.setPermissions(options.permissions);
-    }
-
     this.ready = this.syncPolicies();
     await this.ready;
   }
@@ -48,28 +49,61 @@ export class AuthorizerFacade implements Authorizer {
     return this.enforcer;
   }
 
-  private async replayBasePolicies(enforcer: Enforcer): Promise<void> {
-    for (const policy of this.basePolicies) {
-      const [ptype, ...rule] = policy;
+  private async addPolicyRow(enforcer: Enforcer, policy: string[]): Promise<void> {
+    const [ptype, ...rule] = policy;
 
-      if (ptype === 'p') {
-        await enforcer.addPolicy(...rule);
-        continue;
-      }
+    if (ptype === 'p') {
+      await enforcer.addPolicy(...rule);
+      return;
+    }
 
-      if (ptype === 'g') {
-        await enforcer.addGroupingPolicy(...rule);
-        continue;
-      }
+    if (ptype === 'g') {
+      await enforcer.addGroupingPolicy(...rule);
+      return;
+    }
 
-      if (ptype === 'g2') {
-        await enforcer.addNamedGroupingPolicy('g2', ...rule);
-        continue;
-      }
+    if (ptype === 'g2') {
+      await enforcer.addNamedGroupingPolicy('g2', ...rule);
+      return;
+    }
 
-      if (ptype === 'g3') {
-        await enforcer.addNamedGroupingPolicy('g3', ...rule);
-      }
+    if (ptype === 'g3') {
+      await enforcer.addNamedGroupingPolicy('g3', ...rule);
+      return;
+    }
+
+    throw new Error(`Unsupported policy type: ${ptype}`);
+  }
+
+  private async removePolicyRow(enforcer: Enforcer, policy: string[]): Promise<void> {
+    const [ptype, ...rule] = policy;
+
+    if (ptype === 'p') {
+      await enforcer.removePolicy(...rule);
+      return;
+    }
+
+    if (ptype === 'g') {
+      await enforcer.removeGroupingPolicy(...rule);
+      return;
+    }
+
+    if (ptype === 'g2') {
+      await enforcer.removeNamedGroupingPolicy('g2', ...rule);
+      return;
+    }
+
+    if (ptype === 'g3') {
+      await enforcer.removeNamedGroupingPolicy('g3', ...rule);
+      return;
+    }
+
+    throw new Error(`Unsupported policy type: ${ptype}`);
+  }
+
+  private async replayPolicySnapshot(enforcer: Enforcer): Promise<void> {
+    for (const policy of this.policySnapshot) {
+      await this.addPolicyRow(enforcer, policy);
     }
   }
 
@@ -77,23 +111,7 @@ export class AuthorizerFacade implements Authorizer {
     const enforcer = await this.ensureEnforcer();
 
     await enforcer.clearPolicy();
-    await this.replayBasePolicies(enforcer);
-
-    const permissions = this.state.getPermissions();
-    for (const permission of permissions) {
-      await enforcer.addPermissionForUser(
-        this.subject,
-        permission.resource,
-        this.organization,
-        permission.action,
-        'allow'
-      );
-    }
-
-    const roles = this.state.getRoles();
-    for (const role of roles) {
-      await enforcer.addRoleForUser(this.subject, role, this.organization);
-    }
+    await this.replayPolicySnapshot(enforcer);
   }
 
   public async can(action: string, resource: string): Promise<boolean> {
@@ -121,40 +139,26 @@ export class AuthorizerFacade implements Authorizer {
     return true;
   }
 
-  public async setPermissions(permissions: PermissionGrant[]): Promise<void> {
-    await this.ensureReady();
-    this.state.setPermissions(permissions);
-    this.ready = this.syncPolicies();
-    await this.ready;
-  }
-
-  public async addPermission(permission: PermissionGrant): Promise<void> {
+  public async addPolicy(policy: string[]): Promise<void> {
     const enforcer = await this.ensureReady();
-    this.state.addPermission(permission);
-    await enforcer.addPermissionForUser(
-      this.subject,
-      permission.resource,
-      this.organization,
-      permission.action,
-      'allow'
-    );
+    this.policySnapshot.push([...policy]);
+    await this.addPolicyRow(enforcer, policy);
   }
 
-  public async removePermission(permission: PermissionGrant): Promise<void> {
+  public async removePolicy(policy: string[]): Promise<void> {
     const enforcer = await this.ensureReady();
-    this.state.removePermission(permission);
-    await enforcer.deletePermissionForUser(
-      this.subject,
-      permission.resource,
-      this.organization,
-      permission.action,
-      'allow'
-    );
+    const index = this.policySnapshot.findIndex((current) => rowsEqual(current, policy));
+
+    if (index !== -1) {
+      this.policySnapshot.splice(index, 1);
+    }
+
+    await this.removePolicyRow(enforcer, policy);
   }
 
-  public async replacePayload(payload: AuthorizationPayload): Promise<void> {
+  public async replacePolicies(policies: string[][]): Promise<void> {
     await this.ensureReady();
-    this.state.replacePayload(payload);
+    this.policySnapshot = policies.map((policy) => [...policy]);
     this.ready = this.syncPolicies();
     await this.ready;
   }

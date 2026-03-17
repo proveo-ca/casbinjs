@@ -1,8 +1,4 @@
-import type {
-  AuthorizationPayload,
-  Authorizer,
-  AuthorizerOptions,
-} from '@casbinjs/core';
+import type { Authorizer, AuthorizerOptions } from '@casbinjs/core';
 import type { ReactNode } from 'react';
 
 export interface CasbinContextValue {
@@ -12,7 +8,9 @@ export interface CasbinContextValue {
   can(action: string, resource: string): Promise<boolean>;
   canAny(actions: string[], resource: string): Promise<boolean>;
   canAll(actions: string[], resource: string): Promise<boolean>;
-  replacePayload(payload: AuthorizationPayload): Promise<void>;
+  addPolicy(policy: string[]): Promise<void>;
+  removePolicy(policy: string[]): Promise<void>;
+  replacePolicies(policies: string[][]): Promise<void>;
   getEnforcer(): ReturnType<Authorizer['getEnforcer']> | null;
 }
 
@@ -20,4 +18,10 @@ export interface CasbinProviderProps {
   children: ReactNode;
   authorizer?: Authorizer | null;
   options?: AuthorizerOptions;
+}
+
+export interface CasbinPermissionResult {
+  allowed: boolean;
+  isLoading: boolean;
+  error: Error | null;
 }
