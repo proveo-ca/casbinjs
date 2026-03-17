@@ -2,10 +2,28 @@
   "name": "@casbinjs/react",
   "version": "1.0.0",
   "description": "CasbinJS React bindings",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/proveo-ca/casbinjs.git",
+    "directory": "packages/react"
+  },
+  "homepage": "https://github.com/proveo-ca/casbinjs/tree/main/packages/react",
+  "bugs": "https://github.com/proveo-ca/casbinjs/issues",
   "license": "ISC",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
+  "files": ["dist", "README.md"],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    }
+  },
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
     "build": "tsup src/index.ts --format esm,cjs --dts",
     "dev": "tsup src/index.ts --format esm,cjs --dts --watch",
@@ -24,8 +42,10 @@
     "typescript": "^5.9.3",
     "vitest": "^4.1.0"
   },
+  "peerDependencies": {
+    "react": ">=18.0.0"
+  },
   "dependencies": {
-    "@casbinjs/core": "workspace:*",
-    "react": "^19.2.4"
+    "@casbinjs/core": "workspace:*"
   }
 }
