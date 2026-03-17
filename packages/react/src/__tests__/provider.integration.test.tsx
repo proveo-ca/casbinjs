@@ -1,5 +1,5 @@
 import React from 'react';
-import { act, render, waitFor } from '@testing-library/react';
+import { act, render, waitFor, within } from '@testing-library/react';
 import { createAuthorizer } from '@casbinjs/core';
 import { describe, expect, it } from 'vitest';
 import { getEndpointResponseFixture, toAuthorizerOptions } from './fixtures/endpoint-response';
@@ -173,11 +173,12 @@ describe('@casbinjs/react integration', () => {
         <UseCanView action="read" resource="document:123" />
       </CasbinProvider>
     );
+    const scoped = within(view.container);
 
     await waitFor(() => {
-      expect(view.getByTestId('loading').textContent).toBe('false');
-      expect(view.getByTestId('error').textContent).toBe('');
-      expect(view.getByTestId('allowed').textContent).toBe('true');
+      expect(scoped.getByTestId('loading').textContent).toBe('false');
+      expect(scoped.getByTestId('error').textContent).toBe('');
+      expect(scoped.getByTestId('allowed').textContent).toBe('true');
     });
   });
 
@@ -194,11 +195,12 @@ describe('@casbinjs/react integration', () => {
         <UseCanAnyView actions={['read', 'update']} resource="document:123" />
       </CasbinProvider>
     );
+    const scoped = within(view.container);
 
     await waitFor(() => {
-      expect(view.getByTestId('loading').textContent).toBe('false');
-      expect(view.getByTestId('error').textContent).toBe('');
-      expect(view.getByTestId('allowed').textContent).toBe('true');
+      expect(scoped.getByTestId('loading').textContent).toBe('false');
+      expect(scoped.getByTestId('error').textContent).toBe('');
+      expect(scoped.getByTestId('allowed').textContent).toBe('true');
     });
   });
 
@@ -215,11 +217,12 @@ describe('@casbinjs/react integration', () => {
         <UseCanAllView actions={['read', 'update']} resource="document:123" />
       </CasbinProvider>
     );
+    const scoped = within(view.container);
 
     await waitFor(() => {
-      expect(view.getByTestId('loading').textContent).toBe('false');
-      expect(view.getByTestId('error').textContent).toBe('');
-      expect(view.getByTestId('allowed').textContent).toBe('false');
+      expect(scoped.getByTestId('loading').textContent).toBe('false');
+      expect(scoped.getByTestId('error').textContent).toBe('');
+      expect(scoped.getByTestId('allowed').textContent).toBe('false');
     });
   });
 
