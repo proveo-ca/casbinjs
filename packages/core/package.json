@@ -1,20 +1,28 @@
 {
-  "name": "core",
+  "name": "@casbinjs/core",
   "version": "1.0.0",
-  "description": "",
+  "description": "CasbinJS Core",
   "license": "ISC",
-  "author": "",
-  "type": "commonjs",
-  "main": "index.js",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "build": "tsup src/index.ts --format esm,cjs --dts",
+    "dev": "tsup src/index.ts --format esm,cjs --dts --watch",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:integration": "vitest run --config vitest.integration.config.ts",
+    "test:integration:watch": "vitest --config vitest.integration.config.ts",
+    "typecheck": "tsc --noEmit",
+    "clean": "rimraf dist node_modules"
   },
   "devDependencies": {
+    "rimraf": "^5.0.5",
     "tsup": "^8.5.1",
     "typescript": "^5.9.3",
     "vitest": "^4.1.0"
   },
   "dependencies": {
-    "casbin-core": "0.0.0-beta.1"
+    "casbin-core": "apache/casbin-core#v1.0.0"
   }
 }
