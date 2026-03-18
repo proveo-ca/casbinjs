@@ -1,6 +1,6 @@
 {
   "name": "@casbinjs/solid",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "CasbinJS Solid bindings",
   "repository": {
     "type": "git",
