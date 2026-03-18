@@ -1,11 +1,11 @@
-import type { Authorizer } from '@casbinjs/core';
-import { createAuthorizer } from '@casbinjs/core';
-import { createEffect, createSignal, onCleanup } from 'solid-js';
-import { CasbinContext } from './context';
-import type { CasbinProviderProps } from './types';
+import type { Authorizer } from "@casbinjs/core";
+import { createAuthorizer } from "@casbinjs/core";
+import { createEffect, createSignal, onCleanup } from "solid-js";
+import { CasbinContext } from "./context";
+import type { CasbinProviderProps } from "./types";
 
 function createNotReadyError(): Error {
-  return new Error('Authorizer is not ready');
+  return new Error("Authorizer is not ready");
 }
 
 export function CasbinProvider(props: CasbinProviderProps) {
@@ -27,7 +27,7 @@ export function CasbinProvider(props: CasbinProviderProps) {
     if (!options) {
       setAuthorizer(null);
       setIsLoading(false);
-      setError(new Error('CasbinProvider requires either an authorizer or options'));
+      setError(new Error("CasbinProvider requires either an authorizer or options"));
       return;
     }
 
@@ -55,7 +55,7 @@ export function CasbinProvider(props: CasbinProviderProps) {
 
         setAuthorizer(null);
         setIsLoading(false);
-        setError(nextError instanceof Error ? nextError : new Error('Failed to create authorizer'));
+        setError(nextError instanceof Error ? nextError : new Error("Failed to create authorizer"));
       });
   });
 
@@ -116,9 +116,5 @@ export function CasbinProvider(props: CasbinProviderProps) {
     },
   };
 
-  return (
-    <CasbinContext.Provider value={value}>
-      {props.children}
-    </CasbinContext.Provider>
-  );
+  return <CasbinContext.Provider value={value}>{props.children}</CasbinContext.Provider>;
 }

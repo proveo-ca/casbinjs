@@ -1,5 +1,6 @@
 packages:
   - "packages/*"
+  - "vendor/*"
 
 onlyBuiltDependencies:
   - casbin-core

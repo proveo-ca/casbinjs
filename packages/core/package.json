@@ -1,6 +1,6 @@
 {
   "name": "@casbinjs/core",
-  "version": "1.0.0",
+  "version": "0.0.1",
   "description": "CasbinJS Core",
   "repository": {
     "type": "git",
@@ -35,7 +35,7 @@
     "clean": "rimraf dist node_modules"
   },
   "devDependencies": {
-    "casbin-core": "apache/casbin-core#v1.0.0",
+    "casbin-core": "workspace:*",
     "rimraf": "^5.0.5",
     "tsup": "^8.5.1",
     "typescript": "^5.9.3",

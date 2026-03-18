@@ -1,5 +1,5 @@
-import React, { useEffect, type ComponentType, type ReactNode } from 'react';
-import { render, type RenderResult } from '@testing-library/react';
+import React, { useEffect, type ComponentType, type ReactNode } from "react";
+import { render, type RenderResult } from "@testing-library/react";
 
 interface TestHookProps<TProps, TResult> {
   hook: (props: TProps) => TResult;
@@ -12,7 +12,7 @@ export const TestHook = <TProps, TResult>({
   hook,
   props,
   onResult,
-}: Omit<TestHookProps<TProps, TResult>, 'wrapper'>) => {
+}: Omit<TestHookProps<TProps, TResult>, "wrapper">) => {
   const result = hook(props);
 
   useEffect(() => {

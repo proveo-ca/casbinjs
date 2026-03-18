@@ -1,11 +1,11 @@
-import type { Authorizer } from '@casbinjs/core';
-import { createAuthorizer } from '@casbinjs/core';
-import { useEffect, useMemo, useState } from 'react';
-import { CasbinContext } from './context';
-import type { CasbinProviderProps } from './types';
+import type { Authorizer } from "@casbinjs/core";
+import { createAuthorizer } from "@casbinjs/core";
+import { useEffect, useMemo, useState } from "react";
+import { CasbinContext } from "./context";
+import type { CasbinProviderProps } from "./types";
 
 function createNotReadyError(): Error {
-  return new Error('Authorizer is not ready');
+  return new Error("Authorizer is not ready");
 }
 
 export function CasbinProvider({
@@ -32,7 +32,7 @@ export function CasbinProvider({
     if (!options) {
       setAuthorizer(null);
       setIsLoading(false);
-      setError(new Error('CasbinProvider requires either an authorizer or options'));
+      setError(new Error("CasbinProvider requires either an authorizer or options"));
       return () => {
         active = false;
       };
@@ -57,7 +57,7 @@ export function CasbinProvider({
 
         setAuthorizer(null);
         setIsLoading(false);
-        setError(nextError instanceof Error ? nextError : new Error('Failed to create authorizer'));
+        setError(nextError instanceof Error ? nextError : new Error("Failed to create authorizer"));
       });
 
     return () => {

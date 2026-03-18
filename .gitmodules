@@ -1,0 +1,3 @@
+[submodule "vendor/casbin-core"]
+	path = vendor/casbin-core
+	url = https://github.com/apache/casbin-core

@@ -1,5 +1,5 @@
-import { Enforcer, MemoryAdapter, Model, newEnforcer } from 'casbin-core';
-import { AuthorizerOptions } from './types';
+import { Enforcer, MemoryAdapter, Model, newEnforcer } from "casbin-core";
+import { AuthorizerOptions } from "./types";
 
 const FALLBACK_MODEL = `
 [request_definition]

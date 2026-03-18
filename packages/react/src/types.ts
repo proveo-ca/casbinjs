@@ -1,5 +1,5 @@
-import type { Authorizer, AuthorizerOptions } from '@casbinjs/core';
-import type { ReactNode } from 'react';
+import type { Authorizer, AuthorizerOptions } from "@casbinjs/core";
+import type { ReactNode } from "react";
 
 export interface CasbinContextValue {
   authorizer: Authorizer | null;
@@ -11,7 +11,7 @@ export interface CasbinContextValue {
   addPolicy(policy: string[]): Promise<void>;
   removePolicy(policy: string[]): Promise<void>;
   replacePolicies(policies: string[][]): Promise<void>;
-  getEnforcer(): ReturnType<Authorizer['getEnforcer']> | null;
+  getEnforcer(): ReturnType<Authorizer["getEnforcer"]> | null;
 }
 
 export interface CasbinProviderProps {

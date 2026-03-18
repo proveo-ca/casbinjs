@@ -1,12 +1,12 @@
-import { useContext, useEffect, useMemo, useState } from 'react';
-import { CasbinContext } from './context';
-import type { CasbinContextValue, CasbinPermissionResult } from './types';
+import { useContext, useEffect, useMemo, useState } from "react";
+import { CasbinContext } from "./context";
+import type { CasbinContextValue, CasbinPermissionResult } from "./types";
 
 export function useCasbin(): CasbinContextValue {
   const context = useContext(CasbinContext);
 
   if (!context) {
-    throw new Error('useCasbin must be used within a CasbinProvider');
+    throw new Error("useCasbin must be used within a CasbinProvider");
   }
 
   return context;
@@ -58,7 +58,7 @@ export function useCan(action: string, resource: string): CasbinPermissionResult
         }
 
         setAllowed(false);
-        setError(nextError instanceof Error ? nextError : new Error('Permission check failed'));
+        setError(nextError instanceof Error ? nextError : new Error("Permission check failed"));
         setIsLoading(false);
       }
     }
@@ -76,7 +76,7 @@ export function useCan(action: string, resource: string): CasbinPermissionResult
       isLoading,
       error,
     }),
-    [allowed, error, isLoading]
+    [allowed, error, isLoading],
   );
 }
 
@@ -126,7 +126,7 @@ export function useCanAny(actions: string[], resource: string): CasbinPermission
         }
 
         setAllowed(false);
-        setError(nextError instanceof Error ? nextError : new Error('Permission check failed'));
+        setError(nextError instanceof Error ? nextError : new Error("Permission check failed"));
         setIsLoading(false);
       }
     }
@@ -144,7 +144,7 @@ export function useCanAny(actions: string[], resource: string): CasbinPermission
       isLoading,
       error,
     }),
-    [allowed, error, isLoading]
+    [allowed, error, isLoading],
   );
 }
 
@@ -194,7 +194,7 @@ export function useCanAll(actions: string[], resource: string): CasbinPermission
         }
 
         setAllowed(false);
-        setError(nextError instanceof Error ? nextError : new Error('Permission check failed'));
+        setError(nextError instanceof Error ? nextError : new Error("Permission check failed"));
         setIsLoading(false);
       }
     }
@@ -212,6 +212,6 @@ export function useCanAll(actions: string[], resource: string): CasbinPermission
       isLoading,
       error,
     }),
-    [allowed, error, isLoading]
+    [allowed, error, isLoading],
   );
 }

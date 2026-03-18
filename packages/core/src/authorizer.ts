@@ -1,6 +1,6 @@
-import { Enforcer } from 'casbin-core';
-import { Authorizer, AuthorizerOptions } from './types';
-import { EnforcerFactory } from './factory';
+import { Enforcer } from "casbin-core";
+import { Authorizer, AuthorizerOptions } from "./types";
+import { EnforcerFactory } from "./factory";
 
 function rowsEqual(left: string[], right: string[]): boolean {
   if (left.length !== right.length) {
@@ -12,14 +12,14 @@ function rowsEqual(left: string[], right: string[]): boolean {
 
 export class AuthorizerFacade implements Authorizer {
   private enforcer: Enforcer | null = null;
-  private subject = 'current_user';
-  private organization = '';
+  private subject = "current_user";
+  private organization = "";
   private ready: Promise<void> = Promise.resolve();
   private policySnapshot: string[][] = [];
 
   public async initialize(options: AuthorizerOptions = {}): Promise<void> {
-    this.subject = options.subject || 'current_user';
-    this.organization = options.organization || '';
+    this.subject = options.subject || "current_user";
+    this.organization = options.organization || "";
     this.policySnapshot = options.policies ? options.policies.map((policy) => [...policy]) : [];
 
     this.enforcer = await EnforcerFactory.createEnforcer(options);
@@ -35,7 +35,7 @@ export class AuthorizerFacade implements Authorizer {
     await this.ready;
 
     if (!this.enforcer) {
-      throw new Error('Authorizer has not been initialized');
+      throw new Error("Authorizer has not been initialized");
     }
 
     return this.enforcer;
@@ -43,7 +43,7 @@ export class AuthorizerFacade implements Authorizer {
 
   private async ensureEnforcer(): Promise<Enforcer> {
     if (!this.enforcer) {
-      throw new Error('Authorizer has not been initialized');
+      throw new Error("Authorizer has not been initialized");
     }
 
     return this.enforcer;
@@ -52,23 +52,23 @@ export class AuthorizerFacade implements Authorizer {
   private async addPolicyRow(enforcer: Enforcer, policy: string[]): Promise<void> {
     const [ptype, ...rule] = policy;
 
-    if (ptype === 'p') {
+    if (ptype === "p") {
       await enforcer.addPolicy(...rule);
       return;
     }
 
-    if (ptype === 'g') {
+    if (ptype === "g") {
       await enforcer.addGroupingPolicy(...rule);
       return;
     }
 
-    if (ptype === 'g2') {
-      await enforcer.addNamedGroupingPolicy('g2', ...rule);
+    if (ptype === "g2") {
+      await enforcer.addNamedGroupingPolicy("g2", ...rule);
       return;
     }
 
-    if (ptype === 'g3') {
-      await enforcer.addNamedGroupingPolicy('g3', ...rule);
+    if (ptype === "g3") {
+      await enforcer.addNamedGroupingPolicy("g3", ...rule);
       return;
     }
 
@@ -78,23 +78,23 @@ export class AuthorizerFacade implements Authorizer {
   private async removePolicyRow(enforcer: Enforcer, policy: string[]): Promise<void> {
     const [ptype, ...rule] = policy;
 
-    if (ptype === 'p') {
+    if (ptype === "p") {
       await enforcer.removePolicy(...rule);
       return;
     }
 
-    if (ptype === 'g') {
+    if (ptype === "g") {
       await enforcer.removeGroupingPolicy(...rule);
       return;
     }
 
-    if (ptype === 'g2') {
-      await enforcer.removeNamedGroupingPolicy('g2', ...rule);
+    if (ptype === "g2") {
+      await enforcer.removeNamedGroupingPolicy("g2", ...rule);
       return;
     }
 
-    if (ptype === 'g3') {
-      await enforcer.removeNamedGroupingPolicy('g3', ...rule);
+    if (ptype === "g3") {
+      await enforcer.removeNamedGroupingPolicy("g3", ...rule);
       return;
     }
 

@@ -1,5 +1,5 @@
-import type { Authorizer, AuthorizerOptions } from '@casbinjs/core';
-import type { Accessor, JSX } from 'solid-js';
+import type { Authorizer, AuthorizerOptions } from "@casbinjs/core";
+import type { Accessor, JSX } from "solid-js";
 
 export interface CasbinContextValue {
   authorizer: Accessor<Authorizer | null>;
@@ -11,7 +11,7 @@ export interface CasbinContextValue {
   addPolicy(policy: string[]): Promise<void>;
   removePolicy(policy: string[]): Promise<void>;
   replacePolicies(policies: string[][]): Promise<void>;
-  getEnforcer(): ReturnType<Authorizer['getEnforcer']> | null;
+  getEnforcer(): ReturnType<Authorizer["getEnforcer"]> | null;
 }
 
 export interface CasbinProviderProps {

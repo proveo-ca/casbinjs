@@ -1,9 +1,9 @@
-export * from './types';
-export * from './factory';
-export * from './authorizer';
+export * from "./types";
+export * from "./factory";
+export * from "./authorizer";
 
-import { AuthorizerOptions } from './types';
-import { AuthorizerFacade } from './authorizer';
+import { AuthorizerOptions } from "./types";
+import { AuthorizerFacade } from "./authorizer";
 
 export async function createAuthorizer(options?: AuthorizerOptions) {
   const authorizer = new AuthorizerFacade();
